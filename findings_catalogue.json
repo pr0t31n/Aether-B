@@ -1,0 +1,234 @@
+{
+  "version": "1.0.0",
+  "tool": "Aether-B",
+  "findings": [
+    {
+      "id": "AETHB-001",
+      "title": "KNOB Attack — Bluetooth Entropy Reduction",
+      "severity": "CRITICAL",
+      "cvss_score": 9.3,
+      "cvss_vector": "CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:N",
+      "category": "Cryptographic Weakness",
+      "cve": "CVE-2019-9506",
+      "description": "The Key Negotiation of Bluetooth (KNOB) attack allows an attacker in wireless range to force Bluetooth BR/EDR connections to use a 1-byte entropy key. The Bluetooth specification allows entropy negotiation during connection establishment via the LMP protocol without authentication or integrity protection. An unauthenticated attacker within radio range can inject a modified LMP_encryption_key_size_req packet forcing both devices to accept a single-byte encryption key, which can then be brute-forced in real time. All standard-compliant Bluetooth devices are affected unless the implementation enforces a minimum entropy of 7 or more bytes regardless of negotiated value.",
+      "remediation": "Apply vendor firmware patches that enforce a minimum encryption key entropy of 7 bytes (preferably 16). Verify patch status with the Bluetooth SIG KNOB advisory. Network-level mitigations include deploying Bluetooth intrusion detection to flag LMP entropy negotiation below threshold. Disable BR/EDR on devices where only BLE is needed. Where possible, prefer BLE with LE Secure Connections (LESC) which is not affected by KNOB.",
+      "references": [
+        "https://knobattack.com/",
+        "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-9506",
+        "https://www.bluetooth.com/learn-about-bluetooth/key-attributes/bluetooth-security/knob/"
+      ]
+    },
+    {
+      "id": "AETHB-002",
+      "title": "BIAS Attack — Bluetooth Impersonation and Authentication Bypass",
+      "severity": "CRITICAL",
+      "cvss_score": 9.1,
+      "cvss_vector": "CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:N",
+      "category": "Authentication Bypass",
+      "cve": "CVE-2020-10135",
+      "description": "The Bluetooth Impersonation Attack (BIAS) exploits weaknesses in the Bluetooth Classic (BR/EDR) legacy secure connection authentication procedure. An attacker that knows the Bluetooth address of a previously paired device can impersonate that device by initiating a connection with a role switch before mutual authentication completes. The attack exploits the fact that the Bluetooth specification does not require mutual authentication when the legacy authentication procedure is used, and allows one side to downgrade to unauthenticated link-key derivation. A successful BIAS attack grants the attacker the ability to connect to a victim device posing as a trusted peer without knowledge of the link key.",
+      "remediation": "Apply manufacturer firmware updates that address CVE-2020-10135. Require Secure Simple Pairing (SSP) with secure connections for all Bluetooth Classic sessions and enforce mutual authentication at the application layer. Disable legacy authentication fallback in Bluetooth stack configuration where supported. Consider removing paired devices whose firmware cannot be updated.",
+      "references": [
+        "https://biasattack.com/",
+        "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-10135"
+      ]
+    },
+    {
+      "id": "AETHB-003",
+      "title": "BLUFFS Attack — Forward Secrecy Broken in Bluetooth Sessions",
+      "severity": "HIGH",
+      "cvss_score": 8.2,
+      "cvss_vector": "CVSS:3.1/AV:A/AC:H/PR:N/UI:N/S:C/C:H/I:H/A:N",
+      "category": "Cryptographic Weakness",
+      "cve": "CVE-2023-24023",
+      "description": "BLUFFS (Bluetooth Forward and Future Secrecy) is a set of six attacks against the Bluetooth session establishment procedure that break forward and future secrecy of Bluetooth sessions. The vulnerabilities stem from architectural flaws in the Bluetooth specification: session keys are derived from a single long-term secret (link key or LTK) and two nonces using a non-forward-secret key derivation function (KDF). An attacker who compromises a single session key can impersonate either Bluetooth device in past and future sessions without re-pairing. The attacks apply to both Bluetooth Classic and Bluetooth Low Energy, including Secure Connections mode.",
+      "remediation": "Apply vendor patches that implement session-key diversification and forward-secret key derivation as recommended by the Bluetooth SIG response to CVE-2023-24023. Use application-layer protocols with independent forward secrecy (e.g., TLS 1.3 over Bluetooth RFCOMM) for sensitive communications. Rotate pairing on a regular schedule for high-security deployments.",
+      "references": [
+        "https://dl.acm.org/doi/10.1145/3576915.3616648",
+        "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-24023",
+        "https://www.bluetooth.com/learn-about-bluetooth/key-attributes/bluetooth-security/bluffs/"
+      ]
+    },
+    {
+      "id": "AETHB-004",
+      "title": "BLE Legacy Pairing — Crackable Temporary Key (TK)",
+      "severity": "HIGH",
+      "cvss_score": 8.0,
+      "cvss_vector": "CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
+      "category": "Weak Cryptography",
+      "cve": "CVE-2019-19192",
+      "description": "Bluetooth Low Energy devices using the legacy pairing procedure (SMP v1) with Just Works or Passkey Entry methods are vulnerable to offline brute-force recovery of the Temporary Key (TK). In Just Works pairing, the TK is always 0x0000...0000 (128 bits of zeros), making passive capture sufficient to derive the Short-Term Key (STK) and subsequently the Long-Term Key (LTK). In Passkey Entry pairing, the TK is a 6-digit PIN (max 1,000,000 values) that can be brute-forced offline from a captured pairing exchange. The crackle tool automates this attack. Any passive observer within radio range during the pairing event can permanently decrypt the session.",
+      "remediation": "Migrate all BLE devices to LE Secure Connections (LESC / SMP v2) which uses ECDH key exchange and is not vulnerable to passive TK recovery. If legacy pairing cannot be avoided, use Passkey Entry with out-of-band delivery and enforce the maximum 6-digit PIN. Require re-pairing in a physically secure environment when eavesdropping is suspected.",
+      "references": [
+        "https://github.com/mikeryan/crackle",
+        "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-19192"
+      ]
+    },
+    {
+      "id": "AETHB-005",
+      "title": "Bluetooth PIN Brute Force — Short PIN or Static Passkey",
+      "severity": "HIGH",
+      "cvss_score": 7.5,
+      "cvss_vector": "CVSS:3.1/AV:A/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N",
+      "category": "Authentication Weakness",
+      "cve": "",
+      "description": "Bluetooth Classic devices using the legacy PIN-based pairing procedure (pre-SSP) or BLE devices using Passkey Entry with predictable PINs are susceptible to brute-force or dictionary-based passkey recovery. Common vulnerabilities include: static PINs (e.g., '0000', '1234', '1111') hardcoded in firmware, PINs derived from device MAC address or serial number, and short PINs (4 digits or fewer) that reduce the keyspace to 10,000 values. An attacker that can observe or replay pairing exchanges can brute-force the PIN offline and decrypt all traffic protected with the derived link key.",
+      "remediation": "Use Secure Simple Pairing (SSP) with Numeric Comparison or Out-of-Band methods instead of PIN-based pairing. If PIN pairing is required, enforce a minimum 8-character alphanumeric PIN and rotate it on every pairing event. Ensure PINs are not derived from device identifiers. Firmware that cannot be updated to SSP should be replaced.",
+      "references": [
+        "https://www.bluetooth.com/learn-about-bluetooth/key-attributes/bluetooth-security/",
+        "https://dl.acm.org/doi/10.1145/1180405.1180453"
+      ]
+    },
+    {
+      "id": "AETHB-006",
+      "title": "Unauthenticated GATT Characteristics — Sensitive Data Exposed Without Authentication",
+      "severity": "MEDIUM",
+      "cvss_score": 6.5,
+      "cvss_vector": "CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "category": "Broken Access Control",
+      "cve": "",
+      "description": "One or more GATT characteristics exposing sensitive data (e.g., health metrics, device configuration, credentials, telemetry) are readable by any unauthenticated BLE central device within radio range. The ATT Read Request does not require the initiating device to prove identity or possess any shared secret. This allows an attacker to passively connect and read sensitive characteristic values without prior pairing or bonding. Affected characteristic types commonly include: battery level, device name, firmware version, configuration parameters, and domain-specific sensor data.",
+      "remediation": "Apply ATT read permissions requiring at minimum an authenticated encrypted connection (BLE security mode 1, level 3 or higher) for all characteristics carrying sensitive data. Review all GATT service definitions and enforce appropriate security levels via the Bluetooth stack's ATT permission model. Use service-level encryption requirements and require bonding before exposing sensitive characteristics.",
+      "references": [
+        "https://www.bluetooth.com/specifications/specs/",
+        "https://attack.mitre.org/techniques/T1602/"
+      ]
+    },
+    {
+      "id": "AETHB-007",
+      "title": "GATT Write Without Response — Unauthenticated Command Injection",
+      "severity": "MEDIUM",
+      "cvss_score": 6.8,
+      "cvss_vector": "CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:L",
+      "category": "Improper Authorization",
+      "cve": "",
+      "description": "One or more GATT characteristics support the Write Without Response (ATT_WRITE_CMD) operation without requiring an authenticated or encrypted connection. This allows any BLE device within range to send arbitrary command payloads to the target without authentication. Depending on the characteristic function, this may enable: device configuration modification, command injection into actuator logic, firmware update initiation, or denial-of-service via malformed payloads. Write Without Response is particularly dangerous because the central receives no ATT error response, making attack packets harder to detect.",
+      "remediation": "Apply ATT write permissions requiring authenticated encrypted connections to all writable characteristics. Replace Write Without Response with Write With Response (ATT_WRITE_REQ) where command confirmation is operationally acceptable. Implement application-layer command authentication (HMAC or signed payloads) as a defence-in-depth measure independent of BLE security mode.",
+      "references": [
+        "https://www.bluetooth.com/specifications/specs/core-specification-5-4/",
+        "https://owasp.org/www-project-mobile-security-testing-guide/"
+      ]
+    },
+    {
+      "id": "AETHB-008",
+      "title": "BlueToolkit CVE Exploitation — Remote Code Execution via Known Bluetooth Stack CVE",
+      "severity": "HIGH",
+      "cvss_score": 8.5,
+      "cvss_vector": "CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "category": "Remote Code Execution",
+      "cve": "",
+      "description": "The target Bluetooth device is running a firmware or Bluetooth stack version affected by one or more publicly known CVEs for which proof-of-concept exploits are available in the BlueToolkit framework. BlueToolkit consolidates exploit implementations for vulnerabilities including BlueBorne (CVE-2017-0785, CVE-2017-0781), BLESA, SweynTooth, and related Bluetooth/BLE stack vulnerabilities. Exploitation may result in remote code execution, memory corruption, or full device takeover without any user interaction or prior pairing.",
+      "remediation": "Immediately apply all available Bluetooth stack firmware updates from the device manufacturer. Use the CVE identifiers reported in the assessment findings to obtain the specific patches. If patches are unavailable, isolate the device from untrusted Bluetooth environments. Disable Bluetooth discoverable and connectable modes when not actively in use. Deploy Bluetooth IDS to detect known exploit signatures.",
+      "references": [
+        "https://github.com/sgxgsx/BlueToolkit",
+        "https://armis.com/research/blueborne/",
+        "https://nvd.nist.gov/vuln/search/results?query=bluetooth+stack"
+      ]
+    },
+    {
+      "id": "AETHB-009",
+      "title": "SDP Information Disclosure — Service Discovery Leaks Internal Service Information",
+      "severity": "LOW",
+      "cvss_score": 4.0,
+      "cvss_vector": "CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+      "category": "Information Disclosure",
+      "cve": "",
+      "description": "The Bluetooth Service Discovery Protocol (SDP) on the target device responds to unauthenticated browse requests with detailed service records. The exposed records may include: internal service names and descriptions, protocol stack versions, RFCOMM channel assignments, OBEX service availability, PAN/NAP profile configuration, and device role information. This information assists attackers in identifying further attack surface, fingerprinting the device type and firmware version, and planning targeted exploitation of specific Bluetooth profiles.",
+      "remediation": "Restrict SDP browse responses to authenticated connections only where the Bluetooth stack supports access control on SDP. Remove or obfuscate unnecessary service attributes from SDP records. Disable profiles and services not operationally required to reduce the discoverable attack surface. Enforce a pairing requirement before SDP browsing is permitted where feasible.",
+      "references": [
+        "https://www.bluetooth.com/specifications/specs/",
+        "https://owasp.org/www-project-internet-of-things/"
+      ]
+    },
+    {
+      "id": "AETHB-010",
+      "title": "Bluetooth Eavesdropping — Passive Capture of Unencrypted BR/EDR Traffic",
+      "severity": "MEDIUM",
+      "cvss_score": 6.5,
+      "cvss_vector": "CVSS:3.1/AV:A/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "category": "Insecure Communication",
+      "cve": "",
+      "description": "Bluetooth Classic (BR/EDR) traffic between the target and one or more paired devices was observed in cleartext or with a known/recoverable session key. Using an Ubertooth One or similar hardware sniffer, an attacker within radio range can capture BR/EDR ACL and SCO frames. If the encryption key was negotiated with reduced entropy (see KNOB, AETHB-001) or a captured pairing exchange reveals the link key, all historical and future sessions can be decrypted. Sensitive data exposed may include: RFCOMM serial data, HFP audio streams, A2DP audio, OBEX file transfers, and HID input events.",
+      "remediation": "Ensure all BR/EDR sessions use encryption with maximum entropy key negotiation (16 bytes). Apply the KNOB patch and verify with tools such as nrfSniffer or Ubertooth firmware checks. Use application-layer encryption (TLS/DTLS) over RFCOMM for sensitive data streams as defence-in-depth. Upgrade to BLE with LE Secure Connections where the use case allows.",
+      "references": [
+        "https://greatscottgadgets.com/ubertoothone/",
+        "https://knobattack.com/"
+      ]
+    },
+    {
+      "id": "AETHB-011",
+      "title": "BLE Beacon Tracking — Static MAC Address Enables Persistent Device Tracking",
+      "severity": "LOW",
+      "cvss_score": 3.7,
+      "cvss_vector": "CVSS:3.1/AV:A/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N",
+      "category": "Privacy Violation",
+      "cve": "",
+      "description": "The target BLE device broadcasts advertising packets containing a static or non-rotating public MAC address, allowing any passive observer within radio range to persistently track the device's presence and movements over time. BLE devices are required by the specification to support random address rotation to prevent tracking; however, many IoT devices use fixed public addresses for simplicity or compatibility reasons. An attacker can build a timeline of device appearances at multiple locations using commercially available BLE scanning hardware, enabling physical surveillance of device owners.",
+      "remediation": "Enable Bluetooth resolvable private address (RPA) rotation with an appropriate rotation interval (recommended: 15 minutes or shorter). Configure the Host stack to use LE_Set_Random_Address with a new RPA on each connection or advertising cycle. For pairing persistence, use Identity Resolving Keys (IRK) stored in bonded peer databases so trusted devices can still resolve the address while it remains opaque to observers.",
+      "references": [
+        "https://www.bluetooth.com/learn-about-bluetooth/key-attributes/bluetooth-privacy/",
+        "https://link.springer.com/chapter/10.1007/978-3-030-45724-2_14"
+      ]
+    },
+    {
+      "id": "AETHB-012",
+      "title": "Insecure BLE Pairing Mode — Just Works Pairing with No Authentication",
+      "severity": "MEDIUM",
+      "cvss_score": 5.9,
+      "cvss_vector": "CVSS:3.1/AV:A/AC:H/PR:N/UI:N/S:U/C:H/I:L/A:N",
+      "category": "Authentication Weakness",
+      "cve": "",
+      "description": "The target BLE device accepts pairing using the Just Works association model, which provides no protection against man-in-the-middle attacks. In Just Works pairing, both devices compute a shared secret without any out-of-band or in-band confirmation that the correct peer is being paired. An attacker positioned between the two devices during the pairing event can silently intercept and relay the SMP exchange, completing the pairing with both devices and establishing themselves as a transparent MITM relay. The resulting bonded keys are then known to the attacker, enabling persistent session decryption.",
+      "remediation": "Replace Just Works pairing with Numeric Comparison (if both devices have a display and input capability) or Out-of-Band pairing using NFC or QR code delivery of the OOB data. If the device has display-only capability, use Passkey Entry from the central side. Require LE Secure Connections to prevent downgrade to legacy SMP. Document and justify any remaining use of Just Works via a formal threat model.",
+      "references": [
+        "https://www.bluetooth.com/learn-about-bluetooth/key-attributes/bluetooth-security/",
+        "https://owasp.org/www-project-mobile-security-testing-guide/"
+      ]
+    },
+    {
+      "id": "AETHB-013",
+      "title": "GATTacker MITM — BLE Man-in-the-Middle via Device Cloning",
+      "severity": "HIGH",
+      "cvss_score": 7.8,
+      "cvss_vector": "CVSS:3.1/AV:A/AC:H/PR:N/UI:N/S:C/C:H/I:H/A:N",
+      "category": "Man-in-the-Middle",
+      "cve": "",
+      "description": "The target BLE device is susceptible to a man-in-the-middle attack using GATTacker, a tool that clones the GATT service and characteristic profile of the target and presents a spoofed advertising identity to the legitimate central device. When the central connects to the rogue peripheral (which mirrors all GATT reads/writes to the real target), the attacker observes and may modify all BLE application traffic in transit. Attack prerequisites include: the target uses Just Works or no pairing (AETHB-012), or the attacker was present during initial pairing to capture keys. The attacker can read sensitive characteristics, inject writes, and replay or modify commands without detection.",
+      "remediation": "Enforce authenticated pairing (Numeric Comparison or OOB) to prevent silent connection to rogue devices. Implement certificate pinning or application-layer authentication at the GATT layer so the mobile application validates the device identity beyond the BLE layer. Use LE Secure Connections to resist MITM during pairing. Ensure the central app validates the full GATT profile against an expected fingerprint before trusting the connection.",
+      "references": [
+        "https://github.com/securing/GATTacker",
+        "https://www.securing.pl/en/gattacker-the-tool-for-bluetooth-low-energy-mitm-attack/"
+      ]
+    },
+    {
+      "id": "AETHB-014",
+      "title": "Bluetooth Denial of Service — ACL/SCO Flooding Causing Device Disconnect",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "category": "Denial of Service",
+      "cve": "",
+      "description": "The target Bluetooth device is susceptible to denial-of-service via rapid ACL connection request flooding, malformed SCO packet injection, or L2CAP/RFCOMM protocol fuzzing. Sustained flooding of connection requests from spoofed source addresses exhausts the device's connection table, preventing legitimate devices from connecting. In some firmware implementations, receipt of malformed packets at the HCI or L2CAP layer causes device reset or service crash. Testing was conducted only after explicit authorization (dos_authorized=true in configuration).",
+      "remediation": "Apply Bluetooth stack firmware updates that implement rate-limiting on incoming connection requests and reject malformed L2CAP/SCO frames without panicking. Configure the device to limit accepted concurrent connections and implement exponential backoff for connection request handling. For production deployments, ensure the device recovers gracefully (auto-restart) from stack crashes. This test requires explicit authorization — do not conduct in production without approved maintenance windows.",
+      "references": [
+        "https://www.bluetooth.com/specifications/specs/",
+        "https://attack.mitre.org/techniques/T1499/"
+      ]
+    },
+    {
+      "id": "AETHB-015",
+      "title": "Firmware Extraction via JTAG/SWD — Physical Firmware Dump",
+      "severity": "HIGH",
+      "cvss_score": 7.2,
+      "cvss_vector": "CVSS:3.1/AV:P/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "category": "Physical Security",
+      "cve": "",
+      "description": "The target Bluetooth device exposes an unprotected JTAG or SWD debug interface on the PCB that allows extraction of the full firmware image using OpenOCD and a hardware debug probe. The extracted firmware can be reverse-engineered to recover: hardcoded Bluetooth link keys or LTKs, Wi-Fi/BLE credentials stored in flash, cryptographic secrets used for application-layer authentication, and intellectual property in the firmware binary. Debug port access was not locked via JTAG fuses or access port protection (APProtect/RDPROT). Testing was conducted only with physical_access=true in configuration and explicit written authorization.",
+      "remediation": "Enable all available debug port protection mechanisms: set JTAG fuses to disable debug access, activate Access Port Protection (APProtect) on Nordic nRF SoCs, enable Read Protection (RDP level 2) on STM32 devices, or use equivalent vendor-specific mechanisms. Remove or physically decap JTAG/SWD headers from production hardware. Store cryptographic secrets in protected flash regions or dedicated secure elements. Perform code-signing with key material stored in Hardware Security Modules (HSMs) inaccessible from the main MCU.",
+      "references": [
+        "https://interrupt.memfault.com/blog/debugging-firmware-with-openocd",
+        "https://owasp.org/www-project-embedded-application-security/"
+      ]
+    }
+  ]
+}

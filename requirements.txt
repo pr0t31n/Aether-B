@@ -1,0 +1,25 @@
+# Aether-B — Bluetooth Penetration Test Orchestrator
+# requirements.txt
+#
+# Aether-B uses only Python standard library modules (argparse, json, os, re,
+# shutil, signal, subprocess, sys, threading, time, uuid, datetime, pathlib).
+# No pip packages are required.
+#
+# The following are SYSTEM-LEVEL tools (not pip packages) that must be
+# installed via the operating system package manager or from source.
+# Run:  sudo python3 install.py  to install all of them automatically.
+#
+# --- Bluetooth system tools ---
+# bluez                  (hcitool, hciconfig, bluetoothctl, sdptool, gatttool)
+# bluetooth              (BlueZ kernel module support)
+# ubertooth              (ubertooth-scan, ubertooth-btle, ubertooth-rx)
+# tshark                 (Wireshark CLI — packet capture decoding)
+# binwalk                (firmware entropy + signature analysis)
+# openocd                (JTAG/SWD firmware extraction)
+#
+# --- External tools installed from source ---
+# crackle                (BLE LTK recovery from pcap — github.com/mikeryan/crackle)
+# bettercap              (BLE MITM and network analysis — bettercap.org)
+# GATTacker              (BLE device cloning / MITM — github.com/securing/GATTacker)
+# BlueToolkit            (CVE-based Bluetooth exploit framework — github.com/sgxgsx/BlueToolkit)
+# btscanner              (BR/EDR device scanner)

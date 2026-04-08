@@ -1,0 +1,43 @@
+{
+  "hci_device": "hci0",
+  "ubertooth_device": "/dev/ttyACM0",
+  "target_bdaddrs": [],
+  "target_uuids": [],
+  "timeout_per_phase": 300,
+  "capture_duration": 3600,
+  "phases": {
+    "passive_recon": true,
+    "enumeration": true,
+    "key_recovery": true,
+    "exploitation": false,
+    "firmware": false
+  },
+  "tools": {
+    "ubertooth-scan": "ubertooth-scan",
+    "ubertooth-btle": "ubertooth-btle",
+    "ubertooth-rx": "ubertooth-rx",
+    "btscanner": "btscanner",
+    "sdptool": "sdptool",
+    "gatttool": "gatttool",
+    "hcitool": "hcitool",
+    "hciconfig": "hciconfig",
+    "bluetoothctl": "bluetoothctl",
+    "crackle": "crackle",
+    "bettercap": "bettercap",
+    "gattacker": "node /opt/GATTacker/gattacker.js",
+    "bluetoolkit": "python3 /opt/bluetoolkit/bt.py",
+    "tshark": "tshark",
+    "binwalk": "binwalk",
+    "openocd": "openocd"
+  },
+  "scope": {
+    "bdaddrs": [],
+    "uuids": []
+  },
+  "output_dir": "aether_b_output",
+  "physical_access": false,
+  "injection_authorized": false,
+  "dos_authorized": false,
+  "pairing_authorized": false,
+  "cve_testing_authorized": false
+}
