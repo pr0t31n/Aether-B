@@ -23,11 +23,12 @@ Usage:
 """
 from __future__ import annotations
 
-VERSION = "1.0.1"
+VERSION = "1.0.3"
 
 import argparse
 import json
 import os
+import socket
 import platform
 import re
 import shutil
@@ -56,19 +57,15 @@ _AETHER_B_DIR = Path(__file__).parent.resolve()
 # ── Client directory helpers ──────────────────────────────────────────────────
 
 def _clients_base() -> Path:
-    """Return the OS-appropriate clients root directory."""
+    """Return the OS-appropriate default parent directory for client project folders."""
     system = platform.system()
-    if system == "Darwin":
-        base = Path("/Users/Shared/clients")
-    elif system == "Windows":
+    if system == "Windows":
         base = Path("C:/clients")
+    elif system == "Darwin":
+        base = Path("/Users/Shared/clients")
     else:
         base = Path("/clients")
-    try:
-        base.mkdir(parents=True, exist_ok=True)
-    except PermissionError:
-        base = Path.home() / "clients"
-        base.mkdir(parents=True, exist_ok=True)
+    base.mkdir(parents=True, exist_ok=True)
     return base
 
 
@@ -81,11 +78,7 @@ def _build_project_dir(client_short: str, start_date: str, tool_name: str) -> Pa
             else datetime.now(timezone.utc).strftime('%Y'))
     dt_str = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
     path = _clients_base() / slug / year / tool_name / f"{slug}_{dt_str}"
-    try:
-        path.mkdir(parents=True, exist_ok=True)
-    except PermissionError:
-        path = Path.home() / "clients" / tool_name / f"{slug}_{dt_str}"
-        path.mkdir(parents=True, exist_ok=True)
+    path.mkdir(parents=True, exist_ok=True)
     return path
 
 
@@ -100,6 +93,7 @@ def _write_project_meta(project_dir: Path, tool: str, client_short: str,
                 "year":         year,
                 "created_at":   datetime.now(timezone.utc).isoformat(),
                 "version":      version,
+                "hostname":     socket.gethostname(),
             }, indent=2),
             encoding="utf-8",
         )
