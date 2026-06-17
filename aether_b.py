@@ -23,7 +23,7 @@ Usage:
 """
 from __future__ import annotations
 
-VERSION = "1.1.1"
+VERSION = "1.2.0"
 
 import argparse
 import json
@@ -56,6 +56,17 @@ MANAGED = os.environ.get("SPECTRE_MANAGED") == "1"
 _SP_LOG     = "__SPECTRE_LOG__"
 _SP_ERR     = "__SPECTRE_ERR__"
 _SP_STATUS  = "__SPECTRE_STATUS__"
+
+# §13b/§14j/§14k: run-dir audit log (scan.log + scan.log.json + errors.log), set
+# in main() once the project dir is known. _tok() forwards here so every message
+# + phase transition is persisted with a timestamp (the token stream is ephemeral).
+try:
+    if "/opt/pr0t31n/shared" not in sys.path:
+        sys.path.insert(0, "/opt/pr0t31n/shared")
+    import pr0t31n_event_log as _el
+except Exception:
+    _el = None
+_RUNLOG = None
 _SP_FINDING = "__SPECTRE_FINDING__"
 _SP_PROMPT  = "__SPECTRE_PROMPT__"
 
@@ -126,6 +137,19 @@ _active_procs_lock = threading.Lock()
 
 def _tok(token: str, msg: str) -> None:
     print(f"{token} {msg}", flush=True)
+    # §13b/§14j: persist to the run-dir audit log with a timestamp.
+    if _RUNLOG is not None:
+        try:
+            if token == _SP_LOG:
+                _RUNLOG.info(msg)
+            elif token == _SP_ERR:
+                _RUNLOG.error(msg)
+            elif token == _SP_STATUS:
+                d = json.loads(msg)
+                step = f" — {d['step']}" if d.get("step") else ""
+                _RUNLOG.event(f"phase {d.get('phase','?')}: {d.get('status','?')}{step}")
+        except Exception:
+            pass
 
 
 def _log(msg: str) -> None:
@@ -2107,6 +2131,15 @@ def main() -> None:
 
     project_dir = Path(args.project)
     project_dir.mkdir(parents=True, exist_ok=True)
+    # §13b/§14j/§14k: canonical run-dir audit log + own-version startup EVENT.
+    global _RUNLOG
+    if _el is not None:
+        try:
+            _RUNLOG = _el.EventLogger(project_dir / "scan.log",
+                                       errors_path=project_dir / "errors.log")
+            _RUNLOG.event(f"Aether-B v{VERSION} started")
+        except Exception:
+            _RUNLOG = None
     _write_project_meta(
         project_dir,
         tool=os.environ.get("SPECTRE_TOOL_ID", "aether-b"),
