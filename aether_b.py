@@ -23,7 +23,7 @@ Usage:
 """
 from __future__ import annotations
 
-VERSION = "1.2.1"
+VERSION = Path(__file__).resolve().parent.joinpath("VERSION").read_text().strip()
 
 import argparse
 import json
