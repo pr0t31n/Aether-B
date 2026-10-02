@@ -1934,6 +1934,20 @@ def run(cfg: dict, project_dir: Path) -> None:
     _log(f"Output     : {output_dir}")
     _log("=" * 60)
 
+    # ── Plugin updates ───────────────────────────────────────────────────
+    _bc_bin = shutil.which("bettercap")
+    if _bc_bin:
+        _log("[*] Updating bettercap caplets…")
+        try:
+            subprocess.run(
+                [_bc_bin, "-eval", "caplets.update; quit"],
+                capture_output=True, text=True, timeout=120)
+            _log("[+] bettercap caplets updated.")
+        except subprocess.TimeoutExpired:
+            _log("[~] bettercap caplets update timed out — continuing.")
+        except Exception as _e:
+            _log(f"[~] bettercap caplets update skipped: {_e}")
+
     # Phase 0 — Passive Recon
     if phases_cfg.get("passive_recon", True):
         _phase_passive_recon(cfg, output_dir)
