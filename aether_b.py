@@ -67,6 +67,13 @@ try:
 except Exception:
     _el = None
 _RUNLOG = None
+
+try:
+    import pr0t31n_pause as _pp
+except ImportError:
+    _pp = None
+_PAUSE = None
+
 _SP_FINDING = "__SPECTRE_FINDING__"
 _SP_PROMPT  = "__SPECTRE_PROMPT__"
 
@@ -404,6 +411,11 @@ def _save_findings(output_dir: Path) -> None:
 def _setup_signal_handlers(output_dir: Path) -> None:
     def _handler(signum, frame):
         _err(f"Signal {signum} received — shutting down gracefully.")
+        if _PAUSE is not None:
+            _act = "killed_user" if signum == signal.SIGINT else "killed_crucible"
+            _rsn = "KeyboardInterrupt" if signum == signal.SIGINT else "SIGTERM"
+            _PAUSE.write_stop_reason(_act, _rsn,
+                                     initiated_by="user" if signum == signal.SIGINT else "external")
         _kill_all_procs()
         _save_findings(output_dir)
         _status("aether_b", "aborted", f"signal={signum}")
@@ -1948,11 +1960,15 @@ def run(cfg: dict, project_dir: Path) -> None:
         except Exception as _e:
             _log(f"[~] bettercap caplets update skipped: {_e}")
 
+    if _PAUSE and _PAUSE.check_and_pause(): sys.exit(_pp.EXIT_PAUSED)
+
     # Phase 0 — Passive Recon
     if phases_cfg.get("passive_recon", True):
         _phase_passive_recon(cfg, output_dir)
     else:
         _log("[~] Phase passive_recon disabled in config — skipping")
+
+    if _PAUSE and _PAUSE.check_and_pause(): sys.exit(_pp.EXIT_PAUSED)
 
     # Phase 1 — Enumeration
     if phases_cfg.get("enumeration", True):
@@ -1960,17 +1976,23 @@ def run(cfg: dict, project_dir: Path) -> None:
     else:
         _log("[~] Phase enumeration disabled in config — skipping")
 
+    if _PAUSE and _PAUSE.check_and_pause(): sys.exit(_pp.EXIT_PAUSED)
+
     # Phase 2 — Key Recovery
     if phases_cfg.get("key_recovery", True):
         _phase_key_recovery(cfg, output_dir)
     else:
         _log("[~] Phase key_recovery disabled in config — skipping")
 
+    if _PAUSE and _PAUSE.check_and_pause(): sys.exit(_pp.EXIT_PAUSED)
+
     # Phase 3 — Exploitation
     if phases_cfg.get("exploitation", False):
         _phase_exploitation(cfg, output_dir)
     else:
         _log("[~] Phase exploitation disabled in config — skipping (set exploitation: true to enable)")
+
+    if _PAUSE and _PAUSE.check_and_pause(): sys.exit(_pp.EXIT_PAUSED)
 
     # Phase 4 — Firmware
     if phases_cfg.get("firmware", False):
@@ -1980,6 +2002,9 @@ def run(cfg: dict, project_dir: Path) -> None:
 
     # Persist findings and metadata
     _save_findings(output_dir)
+
+    if _PAUSE:
+        _PAUSE.write_stop_reason("completed", "all_phases_done")
 
     meta = {
         "version": VERSION,
@@ -2154,6 +2179,16 @@ def main() -> None:
             _RUNLOG.event(f"Aether-B v{VERSION} started")
         except Exception:
             _RUNLOG = None
+
+    global _PAUSE
+    if _pp is not None:
+        _PAUSE = _pp.PauseManager(str(project_dir), "aether-b")
+        _PAUSE.start_watcher(grace_period=60)
+        _resumed = os.environ.get("CRUCIBLE_RESUME") == "1"
+        _PAUSE.log_run_type(resumed=_resumed)
+        if _resumed:
+            _PAUSE.cleanup_incomplete()
+
     _write_project_meta(
         project_dir,
         tool=os.environ.get("SPECTRE_TOOL_ID", "aether-b"),
