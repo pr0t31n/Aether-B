@@ -24,6 +24,27 @@ BLUE    = "\033[94m"
 MAGENTA = "\033[95m"
 
 
+def _pip_installed(pkg_spec):
+    """Check if a pip package is already importable."""
+    import importlib.util
+    name = pkg_spec.split(">=")[0].split("==")[0].split("[")[0].split("<")[0].strip()
+    _IMPORT_MAP = {
+        "python-whois": "whois", "beautifulsoup4": "bs4", "python-docx": "docx",
+        "pyOpenSSL": "OpenSSL", "dnspython": "dns", "pyyaml": "yaml",
+        "Pillow": "PIL", "charset-normalizer": "charset_normalizer",
+        "flask-cors": "flask_cors", "flask-socketio": "flask_socketio",
+        "flask-login": "flask_login", "python-engineio": "engineio",
+        "python-socketio": "socketio", "python-dotenv": "dotenv",
+        "python-nmap": "nmap", "python-dateutil": "dateutil",
+        "scikit-learn": "sklearn", "service_identity": "service_identity",
+    }
+    mod = _IMPORT_MAP.get(name, name.replace("-", "_"))
+    try:
+        return importlib.util.find_spec(mod) is not None
+    except (ModuleNotFoundError, ValueError):
+        return False
+
+
 def cprint(msg: str, colour: str = RESET, bold: bool = False) -> None:
     prefix = BOLD if bold else ""
     print(f"{prefix}{colour}{msg}{RESET}")
@@ -322,8 +343,7 @@ GIT_REPOS = [
         "label":    "BlueToolkit",
         "url":      "https://github.com/sgxgsx/BlueToolkit",
         "dest":     "/opt/bluetoolkit",
-        "post_cmd": ["pip3", "install", "--break-system-packages", "-r",
-                     "/opt/bluetoolkit/requirements.txt"],
+        "post_cmd": "__pip_check_requirements__",
         "post_cwd": None,
         "post_install_bin": None,
         "post_install_link": None,
@@ -356,8 +376,28 @@ def clone_or_update(repo: dict, dry_run: bool) -> None:
             return
 
     if repo.get("post_cmd"):
-        info(f"{label}: running post-install step: {' '.join(repo['post_cmd'])}")
-        run(repo["post_cmd"], cwd=repo.get("post_cwd"), dry_run=dry_run)
+        if repo["post_cmd"] == "__pip_check_requirements__":
+            req_file = Path(repo["dest"]) / "requirements.txt"
+            if req_file.exists() and not dry_run:
+                info(f"{label}: installing pip requirements (checking each first)...")
+                pip = ["pip3"]
+                for line in req_file.read_text().splitlines():
+                    line = line.strip()
+                    if not line or line.startswith("#") or line.startswith("-"):
+                        continue
+                    if _pip_installed(line):
+                        info(f"  ✓ {line} already installed")
+                    else:
+                        info(f"  pip install {line} …")
+                        subprocess.run(
+                            pip + ["install", "--break-system-packages", line],
+                            timeout=120,
+                        )
+            elif dry_run:
+                cprint(f"    [DRY-RUN] Would install pip requirements from {repo['dest']}/requirements.txt", MAGENTA)
+        else:
+            info(f"{label}: running post-install step: {' '.join(repo['post_cmd'])}")
+            run(repo["post_cmd"], cwd=repo.get("post_cwd"), dry_run=dry_run)
 
     # Create symlink for compiled binaries
     if repo.get("post_install_bin") and repo.get("post_install_link"):
