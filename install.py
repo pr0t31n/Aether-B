@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # install.py — Aether-B Bluetooth Penetration Test Orchestrator
-# VERSION: 1.0.0 (referenced from /Users/pr0t31n/Aether-B/VERSION — do not bump here)
+# VERSION: 1.0.1 (referenced from /opt/pr0t31n/Aether-B/VERSION — do not bump here)
 # Installs all dependencies for aether_b.py and configures the system.
 
 import argparse
@@ -521,6 +521,8 @@ def phase_service(os_id: str, dry_run: bool) -> None:
     # Ensure bluetooth.service is enabled and running on Linux
     info("Ensuring bluetooth.service is enabled and running...")
     if shutil.which("systemctl"):
+        # unmask first — a masked service rejects enable/start silently
+        run(["systemctl", "unmask", "bluetooth"], dry_run=dry_run)
         run(["systemctl", "enable", "bluetooth"], dry_run=dry_run)
         run(["systemctl", "start",  "bluetooth"], dry_run=dry_run)
     else:
