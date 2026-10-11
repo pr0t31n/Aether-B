@@ -61,6 +61,7 @@ def phase_header(title: str) -> None:
 def info(msg: str)    -> None: cprint(f"  [*] {msg}", BLUE)
 def success(msg: str) -> None: cprint(f"  [+] {msg}", GREEN)
 def warn(msg: str)    -> None: cprint(f"  [!] {msg}", YELLOW)
+def note(msg: str)    -> None: cprint(f"  [i] {msg}", YELLOW)
 def error(msg: str)   -> None: cprint(f"  [-] {msg}", RED)
 def step(msg: str)    -> None: cprint(f"  --> {msg}", CYAN)
 
@@ -257,8 +258,8 @@ def phase_dnf(dry_run: bool) -> None:
     run(["dnf", "upgrade", "-y"], dry_run=dry_run)
     info(f"Installing: {' '.join(DNF_PACKAGES)}")
     run(["dnf", "install", "-y"] + DNF_PACKAGES, check=True, dry_run=dry_run)
-    warn("ubertooth may need manual install on RHEL: https://github.com/greatscottgadgets/ubertooth")
-    warn("btscanner may need manual install on RHEL: compile from source")
+    note("ubertooth may need manual install on RHEL: https://github.com/greatscottgadgets/ubertooth")
+    note("btscanner may need manual install on RHEL: compile from source")
     success("DNF phase complete.")
 
 
@@ -275,7 +276,7 @@ def phase_brew(dry_run: bool) -> None:
     if is_root():
         sudo_user = os.environ.get("SUDO_USER", "")
         if not sudo_user:
-            warn("Running as root but SUDO_USER is not set — skipping brew install "
+            note("Running as root but SUDO_USER is not set — skipping brew install "
                  "to avoid corrupting Homebrew. Re-run as your normal user.")
             return
         base_cmd = ["sudo", "-u", sudo_user, brew_bin]
@@ -297,7 +298,7 @@ def phase_brew(dry_run: bool) -> None:
         run(base_cmd + ["install"] + _missing, dry_run=dry_run)
     else:
         info("All brew packages already installed.")
-    warn("bluez is not available on macOS — hcitool/gatttool/sdptool not installable.")
+    note("bluez is not available on macOS — hcitool/gatttool/sdptool not installable.")
     warn("Use a Linux VM or Kali on a dedicated machine for full Bluetooth pentesting.")
     success("Homebrew phase complete.")
 
@@ -426,11 +427,11 @@ def phase_git(os_id: str, dry_run: bool) -> None:
     phase_header("PHASE 3 — External Tools (git + build)")
 
     if os_id == "windows":
-        warn("Skipping git tool clones on Windows — not supported.")
+        note("Skipping git tool clones on Windows — not supported.")
         return
 
     if os_id == "macos":
-        warn("macOS: skipping crackle (Linux libpcap dependency).")
+        note("macOS: skipping crackle (Linux libpcap dependency).")
         warn("macOS: GATTacker can be installed but requires Linux BLE stack to function.")
         warn("macOS: BlueToolkit requires Linux Bluetooth stack.")
         warn("Cloning BlueToolkit for reference only...")
@@ -438,7 +439,7 @@ def phase_git(os_id: str, dry_run: bool) -> None:
     # crackle: skip on macOS (requires Linux libpcap + pcap raw socket)
     for repo in GIT_REPOS:
         if repo["label"] == "crackle" and os_id == "macos":
-            warn("crackle: skipping on macOS — requires Linux and raw pcap access.")
+            note("crackle: skipping on macOS — requires Linux and raw pcap access.")
             continue
         clone_or_update(repo, dry_run)
 
@@ -454,13 +455,13 @@ def phase_git(os_id: str, dry_run: bool) -> None:
         # bettercap via go install on RHEL if not available via dnf
         bettercap_path = shutil.which("bettercap")
         if not bettercap_path:
-            warn("bettercap not available via dnf on RHEL — attempting go install...")
+            note("bettercap not available via dnf on RHEL — attempting go install...")
             if shutil.which("go"):
                 run(["go", "install", "github.com/bettercap/bettercap@latest"], dry_run=dry_run)
             else:
                 warn("go not found — install bettercap manually: https://www.bettercap.org/installation/")
     else:
-        warn(f"bettercap: manual installation required on {os_id}")
+        note(f"bettercap: manual installation required on {os_id}")
         warn("  See: https://www.bettercap.org/installation/")
 
     success("Git / external tools phase complete.")
@@ -713,7 +714,7 @@ def main() -> None:
         elif os_id == "macos":
             phase_brew(dry_run)
         else:
-            warn(f"Unknown OS '{os_id}' — skipping system package phase. Install manually.")
+            note(f"Unknown OS '{os_id}' — skipping system package phase. Install manually.")
     else:
         info("Skipping system package phase (--skip-apt).")
 
@@ -739,7 +740,7 @@ def main() -> None:
     if is_root() or dry_run:
         phase_service(os_id, dry_run)
     else:
-        warn("Not running as root — skipping HCI interface setup.")
+        note("Not running as root — skipping HCI interface setup.")
         warn("Re-run with sudo to complete HCI configuration.")
 
     # Summary
