@@ -584,13 +584,12 @@ def phase_service(os_id: str, dry_run: bool) -> None:
                 if "UP RUNNING" in output:
                     success("hci0 is UP and RUNNING.")
                 else:
-                    warn("hci0 found but not UP — attempting to bring up...")
+                    note("hci0 found but not UP — attempting to bring up...")
                     run([hciconfig_bin, "hci0", "up"], dry_run=dry_run)
                     run([hciconfig_bin, "hci0", "piscan"], dry_run=dry_run)
             else:
-                warn("hci0 not found. Check that a Bluetooth adapter is attached.")
-                warn("List HCI devices: hciconfig -a")
-                warn("If using USB adapter: check 'dmesg | grep -i bluetooth'")
+                note("hci0 not found — no Bluetooth adapter attached (expected on headless installs).")
+                note("Attach a Bluetooth adapter and re-run, or check: hciconfig -a")
         else:
             cprint("    [DRY-RUN] Would run: hciconfig && hciconfig hci0 up", MAGENTA)
     else:
