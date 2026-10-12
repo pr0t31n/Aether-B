@@ -324,27 +324,37 @@ def _resolve_tool(cfg: dict, key: str) -> Optional[str]:
 
 def _run(cmd: list, timeout: int = 60, cwd: Optional[str] = None,
          output_file: Optional[str] = None) -> tuple[str, int]:
-    """Run a command with timeout; return (stdout+stderr, returncode).
-    2026-06-12 cross-cutting #156: when pr0t31n_tool_runner is available
-    every invocation auto-emits a `.log` sibling per §14."""
+    """Run a command with timeout; return (stdout+stderr, returncode)."""
+    if _PAUSE and _PAUSE.is_pause_requested:
+        return "(paused)", -1
     try:
         if _ur is not None:
             r = _ur.run_tool(
                 cmd, timeout=timeout, output_file=output_file,
                 cwd=cwd, tool_name=(cmd[0] if cmd else ""),
             )
-        else:
-            r = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-                stdin=subprocess.DEVNULL,
-                cwd=cwd,
-            )
-        return (r.stdout or "") + (r.stderr or ""), r.returncode
-    except subprocess.TimeoutExpired:
-        return "(timeout)", -1
+            return (r.stdout or "") + (r.stderr or ""), r.returncode
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            stdin=subprocess.DEVNULL,
+            cwd=cwd,
+        )
+        _pause_key = None
+        if _PAUSE:
+            _pause_key = _PAUSE.register(proc, " ".join(str(c) for c in cmd))
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            stdout, stderr = proc.communicate()
+            return "(timeout)", -1
+        finally:
+            if _pause_key is not None:
+                _PAUSE.unregister(_pause_key)
+        return (stdout or "") + (stderr or ""), proc.returncode
     except FileNotFoundError:
         return f"(executable not found: {cmd[0]})", 127
     except Exception as exc:
@@ -356,6 +366,11 @@ def _popen(cmd: list, **kwargs) -> subprocess.Popen:
     proc = subprocess.Popen(cmd, **kwargs)
     with _active_procs_lock:
         _active_procs.append(proc)
+    if _PAUSE is not None:
+        try:
+            _PAUSE.register(proc, " ".join(str(c) for c in cmd))
+        except Exception:
+            pass
     return proc
 
 
@@ -377,6 +392,24 @@ def _kill_proc(proc: subprocess.Popen, wait_secs: int = 5) -> None:
                 _active_procs.remove(proc)
             except ValueError:
                 pass
+        if _PAUSE is not None:
+            try:
+                _PAUSE.unregister(proc.pid)
+            except Exception:
+                pass
+
+
+def _check_pause():
+    if _PAUSE is not None and _PAUSE.check_and_pause():
+        sys.exit(_pp.EXIT_PAUSED)
+
+
+def _pause_sleep(seconds):
+    _deadline = time.monotonic() + seconds
+    while time.monotonic() < _deadline:
+        if _PAUSE is not None and _PAUSE.is_pause_requested:
+            break
+        time.sleep(min(2, max(0, _deadline - time.monotonic())))
 
 
 def _kill_all_procs() -> None:
@@ -493,6 +526,7 @@ def _phase_passive_recon(cfg: dict, project_dir: Path) -> None:
                 raise RuntimeError("ubertooth-scan stdout unavailable")
             deadline = time.time() + scan_secs + 5
             while time.time() < deadline:
+                _check_pause()
                 try:
                     line = proc.stdout.readline()
                 except Exception:
@@ -552,6 +586,7 @@ def _phase_passive_recon(cfg: dict, project_dir: Path) -> None:
                 raise RuntimeError("hcitool lescan stdout unavailable")
             deadline = time.time() + scan_secs
             while time.time() < deadline:
+                _check_pause()
                 try:
                     line = proc.stdout.readline()
                 except Exception:
@@ -599,6 +634,7 @@ def _phase_passive_recon(cfg: dict, project_dir: Path) -> None:
 
         # Merge BLE advertisers into discovered list
         for adv in ble_advertisers:
+            _check_pause()
             if not any(d.get("bdaddr") == adv["bdaddr"] for d in discovered_devices):
                 discovered_devices.append(adv)
 
@@ -646,7 +682,7 @@ def _phase_passive_recon(cfg: dict, project_dir: Path) -> None:
         proc = None
         try:
             proc = _popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            time.sleep(cap_secs + 2)
+            _pause_sleep(cap_secs + 2)
         except Exception as exc:
             _err(f"ubertooth-rx error: {exc}")
         finally:
@@ -724,6 +760,7 @@ def _phase_enumeration(cfg: dict, project_dir: Path) -> None:
     all_devices_enum: list[dict] = []
 
     for bdaddr in targets:
+        _check_pause()
         if not _in_scope_bdaddr(bdaddr):
             _log(f"  [~] {bdaddr} out of scope — skipping")
             continue
@@ -996,6 +1033,7 @@ def _phase_key_recovery(cfg: dict, project_dir: Path) -> None:
                        list(key_dir.glob("*.pcap"))
 
         for pcap_file in pcap_sources:
+            _check_pause()
             if not pcap_file.exists() or pcap_file.stat().st_size == 0:
                 continue
             crackle_out_file = key_dir / f"crackle_{pcap_file.stem}.txt"
@@ -1043,6 +1081,7 @@ def _phase_key_recovery(cfg: dict, project_dir: Path) -> None:
     # ── Strategy B: ubertooth-btle targeted capture ────────────────────────
     if ubertooth_btle_bin and targets:
         for bdaddr in targets[:3]:  # limit to first 3 targets for time budget
+            _check_pause()
             if not _in_scope_bdaddr(bdaddr):
                 continue
             bdaddr_safe = bdaddr.replace(":", "_")
@@ -1061,7 +1100,7 @@ def _phase_key_recovery(cfg: dict, project_dir: Path) -> None:
             proc = None
             try:
                 proc = _popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                time.sleep(cap_secs)
+                _pause_sleep(cap_secs)
             except Exception as exc:
                 _err(f"ubertooth-btle error for {bdaddr}: {exc}")
             finally:
@@ -1100,6 +1139,7 @@ def _phase_key_recovery(cfg: dict, project_dir: Path) -> None:
         _status(phase_id, "running", "Just Works pairing detection")
 
         for bdaddr in targets[:2]:
+            _check_pause()
             if not _in_scope_bdaddr(bdaddr):
                 continue
             _log(f"  [2c] Testing Just Works pairing with {bdaddr}...")
@@ -1130,6 +1170,7 @@ def _phase_key_recovery(cfg: dict, project_dir: Path) -> None:
         all_pcaps = list((project_dir / "passive_recon").glob("*.pcap")) + \
                     list(key_dir.glob("*.pcap"))
         for pcap_file in all_pcaps:
+            _check_pause()
             if not pcap_file.exists() or pcap_file.stat().st_size == 0:
                 continue
             _log(f"[2] KNOB analysis: scanning {pcap_file.name} for entropy reduction frames...")
@@ -1483,6 +1524,7 @@ def _phase_exploitation(cfg: dict, project_dir: Path) -> None:
             if proc.stdout:
                 deadline = time.time() + bc_secs
                 while time.time() < deadline:
+                    _check_pause()
                     try:
                         line = proc.stdout.readline()
                     except Exception:
@@ -1562,6 +1604,7 @@ def _phase_exploitation(cfg: dict, project_dir: Path) -> None:
     else:
         _status("exploitation_bluetoolkit", "running", "BlueToolkit CVE exploit testing")
         for bdaddr in targets[:2]:
+            _check_pause()
             if not _in_scope_bdaddr(bdaddr):
                 continue
             bt_out_file = exploit_dir / f"bluetoolkit_{bdaddr.replace(':', '_')}.txt"
@@ -1605,6 +1648,7 @@ def _phase_exploitation(cfg: dict, project_dir: Path) -> None:
     else:
         _status("exploitation_bias", "running", "BIAS impersonation attack sequence")
         for bdaddr in targets[:2]:
+            _check_pause()
             if not _in_scope_bdaddr(bdaddr):
                 continue
             bias_out_file = exploit_dir / f"bias_{bdaddr.replace(':', '_')}.txt"
@@ -1657,6 +1701,7 @@ def _phase_exploitation(cfg: dict, project_dir: Path) -> None:
         _status("exploitation_dos", "running", "Bluetooth DoS ACL flood test")
         dos_success = False
         for bdaddr in targets[:1]:
+            _check_pause()
             if not _in_scope_bdaddr(bdaddr):
                 continue
             dos_out_file = exploit_dir / f"dos_{bdaddr.replace(':', '_')}.txt"
@@ -1667,6 +1712,7 @@ def _phase_exploitation(cfg: dict, project_dir: Path) -> None:
             deadline = time.time() + dos_secs
             attempt = 0
             while time.time() < deadline:
+                _check_pause()
                 out, rc = _run(
                     [hcitool_bin, "-i", hci, "cc", bdaddr],
                     timeout=5,
@@ -1821,6 +1867,7 @@ def _phase_firmware(cfg: dict, project_dir: Path) -> None:
             _status("firmware_binwalk", "skipped", "no firmware files to analyse")
         else:
             for fw_file in firmware_targets[:5]:
+                _check_pause()
                 bw_out_file    = firmware_dir / f"binwalk_{fw_file.stem}.txt"
                 bw_extract_dir = firmware_dir / f"binwalk_extract_{fw_file.stem}"
                 _log(f"[4b] binwalk: analysing {fw_file.name}...")
@@ -1960,7 +2007,7 @@ def run(cfg: dict, project_dir: Path) -> None:
         except Exception as _e:
             _log(f"[~] bettercap caplets update skipped: {_e}")
 
-    if _PAUSE and _PAUSE.check_and_pause(): sys.exit(_pp.EXIT_PAUSED)
+    _check_pause()
 
     # Phase 0 — Passive Recon
     if phases_cfg.get("passive_recon", True):
@@ -1968,7 +2015,7 @@ def run(cfg: dict, project_dir: Path) -> None:
     else:
         _log("[~] Phase passive_recon disabled in config — skipping")
 
-    if _PAUSE and _PAUSE.check_and_pause(): sys.exit(_pp.EXIT_PAUSED)
+    _check_pause()
 
     # Phase 1 — Enumeration
     if phases_cfg.get("enumeration", True):
@@ -1976,7 +2023,7 @@ def run(cfg: dict, project_dir: Path) -> None:
     else:
         _log("[~] Phase enumeration disabled in config — skipping")
 
-    if _PAUSE and _PAUSE.check_and_pause(): sys.exit(_pp.EXIT_PAUSED)
+    _check_pause()
 
     # Phase 2 — Key Recovery
     if phases_cfg.get("key_recovery", True):
@@ -1984,7 +2031,7 @@ def run(cfg: dict, project_dir: Path) -> None:
     else:
         _log("[~] Phase key_recovery disabled in config — skipping")
 
-    if _PAUSE and _PAUSE.check_and_pause(): sys.exit(_pp.EXIT_PAUSED)
+    _check_pause()
 
     # Phase 3 — Exploitation
     if phases_cfg.get("exploitation", False):
@@ -1992,7 +2039,7 @@ def run(cfg: dict, project_dir: Path) -> None:
     else:
         _log("[~] Phase exploitation disabled in config — skipping (set exploitation: true to enable)")
 
-    if _PAUSE and _PAUSE.check_and_pause(): sys.exit(_pp.EXIT_PAUSED)
+    _check_pause()
 
     # Phase 4 — Firmware
     if phases_cfg.get("firmware", False):
@@ -2183,7 +2230,11 @@ def main() -> None:
     global _PAUSE
     if _pp is not None:
         _PAUSE = _pp.PauseManager(str(project_dir), "aether-b")
-        _PAUSE.start_watcher(grace_period=60)
+        _PAUSE.start_watcher(
+            checkpoint_callback=lambda: _save_findings(
+                Path(args.project) / cfg.get("output_dir", "aether_b_output")),
+            grace_period=30,
+        )
         _resumed = os.environ.get("CRUCIBLE_RESUME") == "1"
         _PAUSE.log_run_type(resumed=_resumed)
         if _resumed:
