@@ -51,11 +51,11 @@ from pathlib import Path
 from typing import Optional
 
 # ── Protocol token configuration ─────────────────────────────────────────────
-MANAGED = os.environ.get("SPECTRE_MANAGED") == "1"
+MANAGED = os.environ.get("CRUCIBLE_MANAGED") == "1"
 
-_SP_LOG     = "__SPECTRE_LOG__"
-_SP_ERR     = "__SPECTRE_ERR__"
-_SP_STATUS  = "__SPECTRE_STATUS__"
+_CP_LOG     = "__CRUCIBLE_LOG__"
+_CP_ERR     = "__CRUCIBLE_ERR__"
+_CP_STATUS  = "__CRUCIBLE_STATUS__"
 
 # §13b/§14j/§14k: run-dir audit log (scan.log + scan.log.json + errors.log), set
 # in main() once the project dir is known. _tok() forwards here so every message
@@ -74,8 +74,8 @@ except ImportError:
     _pp = None
 _PAUSE = None
 
-_SP_FINDING = "__SPECTRE_FINDING__"
-_SP_PROMPT  = "__SPECTRE_PROMPT__"
+_CP_FINDING = "__CRUCIBLE_FINDING__"
+_CP_PROMPT  = "__CRUCIBLE_PROMPT__"
 
 _AETHER_B_DIR = Path(__file__).parent.resolve()
 
@@ -143,15 +143,15 @@ _active_procs_lock = threading.Lock()
 # ── Protocol token emitters ───────────────────────────────────────────────────
 
 def _tok(token: str, msg: str) -> None:
-    print(f"{token} {msg}", flush=True)
+    print(f"{token}:{msg}", flush=True)
     # §13b/§14j: persist to the run-dir audit log with a timestamp.
     if _RUNLOG is not None:
         try:
-            if token == _SP_LOG:
+            if token == _CP_LOG:
                 _RUNLOG.info(msg)
-            elif token == _SP_ERR:
+            elif token == _CP_ERR:
                 _RUNLOG.error(msg)
-            elif token == _SP_STATUS:
+            elif token == _CP_STATUS:
                 d = json.loads(msg)
                 step = f" — {d['step']}" if d.get("step") else ""
                 _RUNLOG.event(f"phase {d.get('phase','?')}: {d.get('status','?')}{step}")
@@ -160,15 +160,15 @@ def _tok(token: str, msg: str) -> None:
 
 
 def _log(msg: str) -> None:
-    _tok(_SP_LOG, msg)
+    _tok(_CP_LOG, msg)
 
 
 def _err(msg: str) -> None:
-    _tok(_SP_ERR, msg)
+    _tok(_CP_ERR, msg)
 
 
 def _status(phase: str, status: str, step: str = "") -> None:
-    _tok(_SP_STATUS, json.dumps({
+    _tok(_CP_STATUS, json.dumps({
         "phase": phase,
         "status": status,
         "step": step,
@@ -192,11 +192,11 @@ def _finding(finding_id: str, output_file: str = "", data: Optional[dict] = None
         "ts": datetime.now(timezone.utc).isoformat(),
     }
     _findings_collected.append(rec)
-    _tok(_SP_FINDING, json.dumps(rec))
+    _tok(_CP_FINDING, json.dumps(rec))
 
 
 def _prompt(msg: str) -> str:
-    _tok(_SP_PROMPT, msg)
+    _tok(_CP_PROMPT, msg)
     if MANAGED:
         return ""
     try:
@@ -2213,7 +2213,7 @@ def main() -> None:
     if not args.project:
         _cs = (cfg.get("client_short") or "").strip()
         _sd = (cfg.get("start_date") or "").strip()
-        args.project = str(_build_project_dir(_cs, _sd, os.environ.get("SPECTRE_TOOL_ID", "aether-b")))
+        args.project = str(_build_project_dir(_cs, _sd, os.environ.get("CRUCIBLE_TOOL_ID", "aether-b")))
 
     project_dir = Path(args.project)
     project_dir.mkdir(parents=True, exist_ok=True)
@@ -2242,7 +2242,7 @@ def main() -> None:
 
     _write_project_meta(
         project_dir,
-        tool=os.environ.get("SPECTRE_TOOL_ID", "aether-b"),
+        tool=os.environ.get("CRUCIBLE_TOOL_ID", "aether-b"),
         client_short=cfg.get("client_short", ""),
         year=((cfg.get("start_date") or "")[:4] or datetime.now(timezone.utc).strftime("%Y")),
         version=VERSION,
