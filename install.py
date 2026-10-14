@@ -24,6 +24,26 @@ BLUE    = "\033[94m"
 MAGENTA = "\033[95m"
 
 
+
+def _dpkg_installed(pkg):
+    try:
+        r = subprocess.run(["dpkg", "-s", pkg],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return r.returncode == 0
+    except FileNotFoundError:
+        return False
+
+
+def _rpm_installed(pkg):
+    try:
+        return subprocess.run(
+            ["rpm", "-q", pkg],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        ).returncode == 0
+    except FileNotFoundError:
+        return False
+
+
 def _pip_installed(pkg_spec):
     """Check if a pip package is already importable."""
     import importlib.util
@@ -239,7 +259,12 @@ def phase_apt(dry_run: bool) -> None:
     info("Updating package lists...")
     run(["apt-get", "update", "-y"], check=True, dry_run=dry_run)
     info(f"Installing: {' '.join(APT_PACKAGES)}")
-    run(["apt-get", "install", "-y"] + APT_PACKAGES, check=True, dry_run=dry_run)
+    _needed = [p for p in APT_PACKAGES if not _dpkg_installed(p)]
+    _skip = len(APT_PACKAGES) - len(_needed)
+    if _skip:
+        info(f"  {_skip} APT package(s) already installed")
+    if _needed:
+        run(["apt-get", "install", "-y"] + _needed, check=True, dry_run=dry_run)
     # wireshark non-interactive: allow non-root capture
     if not dry_run:
         run(["bash", "-c",
@@ -257,7 +282,12 @@ def phase_dnf(dry_run: bool) -> None:
     run(["dnf", "install", "-y", "epel-release"], dry_run=dry_run)
     run(["dnf", "upgrade", "-y"], dry_run=dry_run)
     info(f"Installing: {' '.join(DNF_PACKAGES)}")
-    run(["dnf", "install", "-y"] + DNF_PACKAGES, check=True, dry_run=dry_run)
+    _needed = [p for p in DNF_PACKAGES if not _rpm_installed(p)]
+    _skip = len(DNF_PACKAGES) - len(_needed)
+    if _skip:
+        info(f"  {_skip} DNF package(s) already installed")
+    if _needed:
+        run(["dnf", "install", "-y"] + _needed, check=True, dry_run=dry_run)
     note("ubertooth may need manual install on RHEL: https://github.com/greatscottgadgets/ubertooth")
     note("btscanner may need manual install on RHEL: compile from source")
     success("DNF phase complete.")

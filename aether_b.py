@@ -1993,6 +1993,18 @@ def run(cfg: dict, project_dir: Path) -> None:
     _log(f"Output     : {output_dir}")
     _log("=" * 60)
 
+    try:
+        import pr0t31n_dep_snapshot as _ds
+        _ds.write_snapshot(
+            output_dir, "Aether-B", VERSION,
+            binaries=["hcitool", "hciconfig", "bluetoothctl", "sdptool",
+                       "gatttool", "tshark", "binwalk", "crackle",
+                       "bettercap", "ubertooth-scan", "ubertooth-btle"],
+            pip_packages=[],
+        )
+    except Exception:
+        pass
+
     # ── Plugin updates ───────────────────────────────────────────────────
     _bc_bin = shutil.which("bettercap")
     if _bc_bin:
