@@ -125,6 +125,25 @@ def detect_os() -> str:
     return "unknown"
 
 
+def _read_os_release() -> dict:
+    d = {}
+    try:
+        with open("/etc/os-release") as f:
+            for line in f:
+                line = line.strip()
+                if "=" not in line: continue
+                k, _, v = line.partition("=")
+                d[k.lower()] = v.strip('"').strip("'")
+    except FileNotFoundError:
+        pass
+    return d
+
+_OS_RELEASE = _read_os_release()
+
+def is_kali() -> bool:
+    return "kali" in _OS_RELEASE.get("id", "").lower()
+
+
 # ---------------------------------------------------------------------------
 # Command runner
 # ---------------------------------------------------------------------------
@@ -204,7 +223,6 @@ def phase_os_detection() -> str:
 APT_PACKAGES = [
     "bluez",
     "bluetooth",
-    "ubertooth",
     "tshark",
     "binwalk",
     "openocd",
@@ -214,12 +232,17 @@ APT_PACKAGES = [
     "libusb-1.0-0-dev",
     "libpcap-dev",
     "pkg-config",
-    "btscanner",
     "bluez-tools",
     "wireshark",
     "nodejs",
     "npm",
     "make",
+]
+
+# Kali-only packages — available in Kali repos but not standard Ubuntu/Debian
+APT_PACKAGES_KALI = [
+    "ubertooth",   # Ubertooth One Bluetooth sniffer tools
+    "btscanner",   # Interactive BR/EDR scanner + SDP dump
 ]
 
 DNF_PACKAGES = [
@@ -248,16 +271,38 @@ BREW_PACKAGES = [
     "wireshark",
 ]
 
+_apt_updated = False
+
+
+def apt_install_optional(packages):
+    global _apt_updated
+    if not _apt_updated:
+        info("Running apt-get update ...")
+        run(["apt-get", "update", "-y"])
+        _apt_updated = True
+    for pkg in packages:
+        if _dpkg_installed(pkg):
+            info(f"  ✓ {pkg} already installed")
+            continue
+        r = subprocess.run(["apt-get", "install", "-y", pkg],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        if r.returncode == 0:
+            info(f"  ✓ {pkg} installed")
+        else:
+            warn(f"  {pkg} not available — skipping (install manually if needed)")
+
 
 # ---------------------------------------------------------------------------
 # Phase 1 — System packages
 # ---------------------------------------------------------------------------
 
 def phase_apt(dry_run: bool) -> None:
+    global _apt_updated
     phase_header("PHASE 1 — System Packages (apt)")
     require_root()
     info("Updating package lists...")
     run(["apt-get", "update", "-y"], check=True, dry_run=dry_run)
+    _apt_updated = True
     info(f"Installing: {' '.join(APT_PACKAGES)}")
     _needed = [p for p in APT_PACKAGES if not _dpkg_installed(p)]
     _skip = len(APT_PACKAGES) - len(_needed)
@@ -272,7 +317,14 @@ def phase_apt(dry_run: bool) -> None:
              " | debconf-set-selections"],
             dry_run=dry_run)
     warn("Note: 'bluez' installs hcitool, hciconfig, sdptool, gatttool, bluetoothctl.")
-    warn("      'ubertooth' installs ubertooth-scan, ubertooth-btle, ubertooth-rx.")
+    # Kali-only Bluetooth packages
+    if is_kali():
+        info("Installing Kali-specific Bluetooth packages…")
+        apt_install_optional(APT_PACKAGES_KALI)
+        warn("      'ubertooth' installs ubertooth-scan, ubertooth-btle, ubertooth-rx.")
+    else:
+        warn("Hardware-specific packages (ubertooth, btscanner) are only available in Kali repos.")
+        note("On other distros, install from source or see tool documentation.")
     success("APT phase complete.")
 
 
