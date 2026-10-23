@@ -4,7 +4,7 @@
   "findings": [
     {
       "id": "AETHB-001",
-      "title": "KNOB Attack — Bluetooth Entropy Reduction",
+      "title": "Bluetooth: KNOB Attack — Bluetooth Entropy Reduction",
       "severity": "CRITICAL",
       "cvss_score": 9.3,
       "cvss_vector": "CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:N",
@@ -20,7 +20,7 @@
     },
     {
       "id": "AETHB-002",
-      "title": "BIAS Attack — Bluetooth Impersonation and Authentication Bypass",
+      "title": "Authentication Bypass: BIAS Attack — Bluetooth Impersonation and Authentication Bypass",
       "severity": "CRITICAL",
       "cvss_score": 9.1,
       "cvss_vector": "CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:N",
@@ -35,7 +35,7 @@
     },
     {
       "id": "AETHB-003",
-      "title": "BLUFFS Attack — Forward Secrecy Broken in Bluetooth Sessions",
+      "title": "Bluetooth: BLUFFS Attack — Forward Secrecy Broken in Bluetooth Sessions",
       "severity": "HIGH",
       "cvss_score": 8.2,
       "cvss_vector": "CVSS:3.1/AV:A/AC:H/PR:N/UI:N/S:C/C:H/I:H/A:N",
@@ -51,7 +51,7 @@
     },
     {
       "id": "AETHB-004",
-      "title": "BLE Legacy Pairing — Crackable Temporary Key (TK)",
+      "title": "Bluetooth: BLE Legacy Pairing — Crackable Temporary Key (TK)",
       "severity": "HIGH",
       "cvss_score": 8.0,
       "cvss_vector": "CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
@@ -66,7 +66,7 @@
     },
     {
       "id": "AETHB-005",
-      "title": "Bluetooth PIN Brute Force — Short PIN or Static Passkey",
+      "title": "Bluetooth: Bluetooth PIN Brute Force — Short PIN or Static Passkey",
       "severity": "HIGH",
       "cvss_score": 7.5,
       "cvss_vector": "CVSS:3.1/AV:A/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N",
@@ -96,7 +96,7 @@
     },
     {
       "id": "AETHB-007",
-      "title": "GATT Write Without Response — Unauthenticated Command Injection",
+      "title": "Unauthenticated Access: GATT Write Without Response — Unauthenticated Command Injection",
       "severity": "MEDIUM",
       "cvss_score": 6.8,
       "cvss_vector": "CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:L",
@@ -111,7 +111,7 @@
     },
     {
       "id": "AETHB-008",
-      "title": "BlueToolkit CVE Exploitation — Remote Code Execution via Known Bluetooth Stack CVE",
+      "title": "Bluetooth: BlueToolkit CVE Exploitation — Remote Code Execution via Known Bluetooth Stack CVE",
       "severity": "HIGH",
       "cvss_score": 8.5,
       "cvss_vector": "CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
@@ -142,7 +142,7 @@
     },
     {
       "id": "AETHB-010",
-      "title": "Bluetooth Eavesdropping — Passive Capture of Unencrypted BR/EDR Traffic",
+      "title": "Bluetooth: Bluetooth Eavesdropping — Passive Capture of Unencrypted BR/EDR Traffic",
       "severity": "MEDIUM",
       "cvss_score": 6.5,
       "cvss_vector": "CVSS:3.1/AV:A/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N",
@@ -157,7 +157,7 @@
     },
     {
       "id": "AETHB-011",
-      "title": "BLE Beacon Tracking — Static MAC Address Enables Persistent Device Tracking",
+      "title": "Bluetooth: BLE Beacon Tracking — Static MAC Address Enables Persistent Device Tracking",
       "severity": "LOW",
       "cvss_score": 3.7,
       "cvss_vector": "CVSS:3.1/AV:A/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N",
@@ -172,7 +172,7 @@
     },
     {
       "id": "AETHB-012",
-      "title": "Insecure BLE Pairing Mode — Just Works Pairing with No Authentication",
+      "title": "Authentication: Insecure BLE Pairing Mode — Just Works Pairing with No Authentication",
       "severity": "MEDIUM",
       "cvss_score": 5.9,
       "cvss_vector": "CVSS:3.1/AV:A/AC:H/PR:N/UI:N/S:U/C:H/I:L/A:N",
@@ -187,7 +187,7 @@
     },
     {
       "id": "AETHB-013",
-      "title": "GATTacker MITM — BLE Man-in-the-Middle via Device Cloning",
+      "title": "Bluetooth: GATTacker MITM — BLE Man-in-the-Middle via Device Cloning",
       "severity": "HIGH",
       "cvss_score": 7.8,
       "cvss_vector": "CVSS:3.1/AV:A/AC:H/PR:N/UI:N/S:C/C:H/I:H/A:N",
@@ -202,7 +202,7 @@
     },
     {
       "id": "AETHB-014",
-      "title": "Bluetooth Denial of Service — ACL/SCO Flooding Causing Device Disconnect",
+      "title": "UWB: Bluetooth Denial of Service — ACL/SCO Flooding Causing Device Disconnect",
       "severity": "MEDIUM",
       "cvss_score": 5.3,
       "cvss_vector": "CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
@@ -217,7 +217,7 @@
     },
     {
       "id": "AETHB-015",
-      "title": "Firmware Extraction via JTAG/SWD — Physical Firmware Dump",
+      "title": "Wireless Vulnerability: Firmware Extraction via JTAG/SWD — Physical Firmware Dump",
       "severity": "HIGH",
       "cvss_score": 7.2,
       "cvss_vector": "CVSS:3.1/AV:P/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
