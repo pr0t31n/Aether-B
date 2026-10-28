@@ -130,6 +130,7 @@ def _write_project_meta(project_dir: Path, tool: str, client_short: str,
 # ── In-process state ──────────────────────────────────────────────────────────
 _catalogue: dict[str, dict] = {}
 _findings_collected: list[dict] = []
+_RUN_DIR: Optional[Path] = None
 
 # ── Scope enforcement state ───────────────────────────────────────────────────
 _scope_bdaddrs: set[str] = set()
@@ -193,6 +194,7 @@ def _finding(finding_id: str, output_file: str = "", data: Optional[dict] = None
     }
     _findings_collected.append(rec)
     _tok(_CP_FINDING, json.dumps(rec))
+    _flush_findings()
 
 
 def _prompt(msg: str) -> str:
@@ -437,6 +439,15 @@ def _save_findings(output_dir: Path) -> None:
     out = output_dir / "findings_spectre.json"
     out.write_text(json.dumps(_findings_collected, indent=2), encoding="utf-8")
     _log(f"Findings written: {out} ({len(_findings_collected)} item(s))")
+
+
+def _flush_findings():
+    if _RUN_DIR is None:
+        return
+    try:
+        _save_findings(_RUN_DIR)
+    except Exception:
+        pass
 
 
 # ── Signal handler ────────────────────────────────────────────────────────────
@@ -1964,10 +1975,11 @@ def _phase_firmware(cfg: dict, project_dir: Path) -> None:
 # ── Main orchestrator ─────────────────────────────────────────────────────────
 
 def run(cfg: dict, project_dir: Path) -> None:
-    global _scope_bdaddrs, _scope_uuids
+    global _scope_bdaddrs, _scope_uuids, _RUN_DIR
 
     output_dir = project_dir / cfg.get("output_dir", "aether_b_output")
     output_dir.mkdir(parents=True, exist_ok=True)
+    _RUN_DIR = output_dir
 
     # Scope enforcement
     scope_cfg = cfg.get("scope", {})
