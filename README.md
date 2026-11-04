@@ -45,6 +45,9 @@ Security testing is a professional discipline with significant ethical and legal
 
 # Aether-B — Bluetooth Penetration Test Orchestrator
 
+> [!CAUTION]
+> **Under Development — Untested.** This tool has not been validated in production engagements. Features may be incomplete, unstable, or produce unreliable results. Do not rely on its output for deliverables without independent verification.
+
 Aether-B is a multi-phase Bluetooth and BLE security assessment tool that orchestrates
 passive reconnaissance, service enumeration, key recovery, active exploitation, and
 firmware analysis into a single, structured workflow. It integrates with the Spectre
