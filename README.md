@@ -50,7 +50,7 @@ Security testing is a professional discipline with significant ethical and legal
 
 Aether-B is a multi-phase Bluetooth and BLE security assessment tool that orchestrates
 passive reconnaissance, service enumeration, key recovery, active exploitation, and
-firmware analysis into a single, structured workflow. It integrates with the Spectre
+firmware analysis into a single, structured workflow. It integrates with the Crucible
 management platform via protocol tokens emitted to stdout.
 
 ---
@@ -61,7 +61,7 @@ Aether-B automates Bluetooth Classic (BR/EDR) and Bluetooth Low Energy (BLE) pen
 testing using industry-standard tools (hcitool, sdptool, gatttool, crackle, bettercap,
 GATTacker, BlueToolkit, Ubertooth One) orchestrated through a structured phase-based engine.
 
-All phases emit Spectre protocol tokens for real-time dashboard integration. Findings are
+All phases emit Crucible protocol tokens for real-time dashboard integration. Findings are
 written to `findings_spectre.json` for import into reporting pipelines.
 
 ---
@@ -197,10 +197,10 @@ sudo python3 aether_b.py \
 python3 aether_b.py --list-phases
 ```
 
-### Spectre managed mode
+### Crucible managed mode
 
 ```bash
-SPECTRE_MANAGED=1 sudo python3 aether_b.py --config config.json --project managed_run
+CRUCIBLE_MANAGED=1 sudo python3 aether_b.py --config config.json --project managed_run
 ```
 
 ---
@@ -268,9 +268,9 @@ SPECTRE_MANAGED=1 sudo python3 aether_b.py --config config.json --project manage
 
 ---
 
-## Spectre Integration
+## Crucible Integration
 
-When `SPECTRE_MANAGED=1` is set, Aether-B emits structured tokens to stdout:
+When `CRUCIBLE_MANAGED=1` is set, Aether-B emits structured tokens to stdout:
 
 | Token | Format | Description |
 |---|---|---|
