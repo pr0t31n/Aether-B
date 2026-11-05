@@ -55,6 +55,9 @@ management platform via protocol tokens emitted to stdout.
 
 ---
 
+
+> **[View full documentation on the Codex Wiki](https://wiki.pr0t31n.com/tools/aether-b)** — detailed features, CLI reference, findings catalogue, and integration guides.
+
 ## Overview
 
 Aether-B automates Bluetooth Classic (BR/EDR) and Bluetooth Low Energy (BLE) penetration
