@@ -65,7 +65,7 @@ testing using industry-standard tools (hcitool, sdptool, gatttool, crackle, bett
 GATTacker, BlueToolkit, Ubertooth One) orchestrated through a structured phase-based engine.
 
 All phases emit Crucible protocol tokens for real-time dashboard integration. Findings are
-written to `findings_spectre.json` for import into reporting pipelines.
+written to `findings_crucible.json` for import into Crucible.
 
 ---
 
@@ -265,7 +265,7 @@ CRUCIBLE_MANAGED=1 sudo python3 aether_b.py --config config.json --project manag
       openocd_output.txt
       binwalk_<fw>.txt
       binwalk_extract_<fw>/
-    findings_spectre.json
+    findings_crucible.json
     assessment_meta.json
 ```
 
@@ -277,13 +277,13 @@ When `CRUCIBLE_MANAGED=1` is set, Aether-B emits structured tokens to stdout:
 
 | Token | Format | Description |
 |---|---|---|
-| `__SPECTRE_LOG__` | `<message>` | Progress log line |
-| `__SPECTRE_ERR__` | `<message>` | Non-fatal error message |
-| `__SPECTRE_STATUS__` | `{"phase": ..., "status": ..., "step": ..., "ts": ...}` | Phase lifecycle event |
-| `__SPECTRE_FINDING__` | Full finding JSON record | Security finding discovered |
-| `__SPECTRE_PROMPT__` | `<message>` | User prompt (suppressed in managed mode) |
+| `__CRUCIBLE_LOG__` | `<message>` | Progress log line |
+| `__CRUCIBLE_ERR__` | `<message>` | Non-fatal error message |
+| `__CRUCIBLE_STATUS__` | `{"phase": ..., "status": ..., "step": ..., "ts": ...}` | Phase lifecycle event |
+| `__CRUCIBLE_FINDING__` | Full finding JSON record | Security finding discovered |
+| `__CRUCIBLE_PROMPT__` | `<message>` | User prompt (suppressed in managed mode) |
 
-Findings are also written to `findings_spectre.json` for offline import.
+Findings are also written to `findings_crucible.json` for Crucible import.
 
 ---
 
