@@ -208,6 +208,32 @@ CRUCIBLE_MANAGED=1 sudo python3 aether_b.py --config config.json --project manag
 
 ---
 
+## CLI Reference
+
+All flags accepted by `aether_b.py`:
+
+| Flag | Short | Argument | Default | Description |
+|---|---|---|---|---|
+| `--config` | `-c` | `PATH` | `config.json` (next to aether_b.py) | JSON config file |
+| `--project` | `-p` | `PATH` | `aether_b_<YYYYMMDD_HHMMSS>` | Project root directory for all output files |
+| `--hci` | | `DEVICE` | (from config) | HCI device to use (e.g. `hci0`, `hci1`) |
+| `--ubertooth` | | `PATH` | (from config) | Ubertooth device path (e.g. `/dev/ttyACM0`) |
+| `--target-bdaddr` | | `AA:BB:CC:DD:EE:FF` | (none) | Target Bluetooth BD address (repeatable) |
+| `--target-uuid` | | `UUID` | (none) | Target BLE service UUID (repeatable) |
+| `--phase` | | `PHASE` | (all enabled) | Run a single phase only. Choices: `passive_recon`, `enumeration`, `key_recovery`, `exploitation`, `firmware` |
+| `--timeout` | `-t` | `SECONDS` | (from config) | Per-phase timeout in seconds |
+| `--physical-access` | | | `false` | Confirm physical access to devices (enables JTAG/SWD extraction) |
+| `--injection-authorized` | | | `false` | Confirm injection / MITM is authorised (enables exploitation phases) |
+| `--dos-authorized` | | | `false` | Confirm DoS testing is authorised |
+| `--pairing-authorized` | | | `false` | Confirm active pairing attempts are authorised |
+| `--cve-testing-authorized` | | | `false` | Confirm CVE exploit testing is authorised (enables BlueToolkit) |
+| `--scope-bdaddr` | | `AA:BB:CC:DD:EE:FF` | (none) | Scope whitelist BD address (repeatable) |
+| `--scope-uuid` | | `UUID` | (none) | Scope whitelist service UUID (repeatable) |
+| `--list-phases` | | | `false` | List available phases and exit |
+| `--version` | | | | Print version and exit |
+
+---
+
 ## Config Reference
 
 | Key | Type | Default | Description |
