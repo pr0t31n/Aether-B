@@ -17,7 +17,10 @@
         "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-9506",
         "https://www.bluetooth.com/learn-about-bluetooth/key-attributes/bluetooth-security/knob/"
       ],
-      "risk": "HIGH"
+      "risk": "HIGH",
+      "remediation_category": "Network Security",
+      "impact": "An attacker could leverage this to gain significant unauthorized access, escalate privileges, or exfiltrate sensitive data from affected systems. Network-level vulnerabilities may allow traffic interception, lateral movement, or unauthorized service access.",
+      "remediation_brief": "Restrict network access using firewalls and segmentation. Disable unnecessary services and protocols. Implement network monitoring."
     },
     {
       "id": "AETHB-002",
@@ -33,7 +36,10 @@
         "https://biasattack.com/",
         "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-10135"
       ],
-      "risk": "HIGH"
+      "risk": "HIGH",
+      "remediation_category": "Network Security",
+      "impact": "An attacker could leverage this to gain significant unauthorized access, escalate privileges, or exfiltrate sensitive data from affected systems. Network-level vulnerabilities may allow traffic interception, lateral movement, or unauthorized service access.",
+      "remediation_brief": "Restrict network access using firewalls and segmentation. Disable unnecessary services and protocols. Implement network monitoring."
     },
     {
       "id": "AETHB-003",
@@ -50,7 +56,10 @@
         "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-24023",
         "https://www.bluetooth.com/learn-about-bluetooth/key-attributes/bluetooth-security/bluffs/"
       ],
-      "risk": "HIGH"
+      "risk": "HIGH",
+      "remediation_category": "Network Security",
+      "impact": "An attacker could leverage this to gain significant unauthorized access, escalate privileges, or exfiltrate sensitive data from affected systems. Network-level vulnerabilities may allow traffic interception, lateral movement, or unauthorized service access.",
+      "remediation_brief": "Restrict network access using firewalls and segmentation. Disable unnecessary services and protocols. Implement network monitoring."
     },
     {
       "id": "AETHB-004",
@@ -66,7 +75,10 @@
         "https://github.com/mikeryan/crackle",
         "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-19192"
       ],
-      "risk": "HIGH"
+      "risk": "HIGH",
+      "remediation_category": "Network Security",
+      "impact": "An attacker could leverage this to gain significant unauthorized access, escalate privileges, or exfiltrate sensitive data from affected systems. Network-level vulnerabilities may allow traffic interception, lateral movement, or unauthorized service access.",
+      "remediation_brief": "Restrict network access using firewalls and segmentation. Disable unnecessary services and protocols. Implement network monitoring."
     },
     {
       "id": "AETHB-005",
@@ -82,7 +94,10 @@
         "https://www.bluetooth.com/learn-about-bluetooth/key-attributes/bluetooth-security/",
         "https://dl.acm.org/doi/10.1145/1180405.1180453"
       ],
-      "risk": "HIGH"
+      "risk": "HIGH",
+      "remediation_category": "Network Security",
+      "impact": "An attacker could leverage this to gain significant unauthorized access, escalate privileges, or exfiltrate sensitive data from affected systems. Network-level vulnerabilities may allow traffic interception, lateral movement, or unauthorized service access.",
+      "remediation_brief": "Restrict network access using firewalls and segmentation. Disable unnecessary services and protocols. Implement network monitoring."
     },
     {
       "id": "AETHB-006",
@@ -98,7 +113,10 @@
         "https://www.bluetooth.com/specifications/specs/",
         "https://attack.mitre.org/techniques/T1602/"
       ],
-      "risk": "HIGH"
+      "risk": "HIGH",
+      "remediation_category": "Information Disclosure",
+      "impact": "An attacker could leverage this to gain significant unauthorized access, escalate privileges, or exfiltrate sensitive data from affected systems. Exposed information aids attacker reconnaissance and reveals sensitive system details.",
+      "remediation_brief": "Remove or restrict access to sensitive information. Disable verbose errors, directory listings, and unnecessary headers."
     },
     {
       "id": "AETHB-007",
@@ -114,7 +132,10 @@
         "https://www.bluetooth.com/specifications/specs/core-specification-5-4/",
         "https://owasp.org/www-project-mobile-security-testing-guide/"
       ],
-      "risk": "HIGH"
+      "risk": "HIGH",
+      "remediation_category": "Network Security",
+      "impact": "An attacker could leverage this to gain significant unauthorized access, escalate privileges, or exfiltrate sensitive data from affected systems. Network-level vulnerabilities may allow traffic interception, lateral movement, or unauthorized service access.",
+      "remediation_brief": "Restrict network access using firewalls and segmentation. Disable unnecessary services and protocols. Implement network monitoring."
     },
     {
       "id": "AETHB-008",
@@ -131,7 +152,10 @@
         "https://armis.com/research/blueborne/",
         "https://nvd.nist.gov/vuln/search/results?query=bluetooth+stack"
       ],
-      "risk": "CRITICAL"
+      "risk": "CRITICAL",
+      "remediation_category": "Network Security",
+      "impact": "An attacker could exploit this to gain full system compromise, execute arbitrary code, or obtain complete unauthorized access to sensitive data and systems. Network-level vulnerabilities may allow traffic interception, lateral movement, or unauthorized service access.",
+      "remediation_brief": "Restrict network access using firewalls and segmentation. Disable unnecessary services and protocols. Implement network monitoring."
     },
     {
       "id": "AETHB-009",
@@ -147,7 +171,10 @@
         "https://www.bluetooth.com/specifications/specs/",
         "https://owasp.org/www-project-internet-of-things/"
       ],
-      "risk": "MEDIUM"
+      "risk": "MEDIUM",
+      "remediation_category": "Information Disclosure",
+      "impact": "An attacker could potentially exploit this weakness to gain partial access, disclose sensitive information, or degrade the security posture of the affected system. Exposed information aids attacker reconnaissance and reveals sensitive system details.",
+      "remediation_brief": "Remove or restrict access to sensitive information. Disable verbose errors, directory listings, and unnecessary headers."
     },
     {
       "id": "AETHB-010",
@@ -163,7 +190,10 @@
         "https://greatscottgadgets.com/ubertoothone/",
         "https://knobattack.com/"
       ],
-      "risk": "MEDIUM"
+      "risk": "MEDIUM",
+      "remediation_category": "Network Security",
+      "impact": "An attacker could potentially exploit this weakness to gain partial access, disclose sensitive information, or degrade the security posture of the affected system. Network-level vulnerabilities may allow traffic interception, lateral movement, or unauthorized service access.",
+      "remediation_brief": "Restrict network access using firewalls and segmentation. Disable unnecessary services and protocols. Implement network monitoring."
     },
     {
       "id": "AETHB-011",
@@ -179,7 +209,10 @@
         "https://www.bluetooth.com/learn-about-bluetooth/key-attributes/bluetooth-privacy/",
         "https://link.springer.com/chapter/10.1007/978-3-030-45724-2_14"
       ],
-      "risk": "MEDIUM"
+      "risk": "MEDIUM",
+      "remediation_category": "Network Security",
+      "impact": "An attacker could potentially exploit this weakness to gain partial access, disclose sensitive information, or degrade the security posture of the affected system. Network-level vulnerabilities may allow traffic interception, lateral movement, or unauthorized service access.",
+      "remediation_brief": "Restrict network access using firewalls and segmentation. Disable unnecessary services and protocols. Implement network monitoring."
     },
     {
       "id": "AETHB-012",
@@ -195,7 +228,10 @@
         "https://www.bluetooth.com/learn-about-bluetooth/key-attributes/bluetooth-security/",
         "https://owasp.org/www-project-mobile-security-testing-guide/"
       ],
-      "risk": "HIGH"
+      "risk": "HIGH",
+      "remediation_category": "Network Security",
+      "impact": "An attacker could leverage this to gain significant unauthorized access, escalate privileges, or exfiltrate sensitive data from affected systems. Network-level vulnerabilities may allow traffic interception, lateral movement, or unauthorized service access.",
+      "remediation_brief": "Restrict network access using firewalls and segmentation. Disable unnecessary services and protocols. Implement network monitoring."
     },
     {
       "id": "AETHB-013",
@@ -211,7 +247,10 @@
         "https://github.com/securing/GATTacker",
         "https://www.securing.pl/en/gattacker-the-tool-for-bluetooth-low-energy-mitm-attack/"
       ],
-      "risk": "HIGH"
+      "risk": "HIGH",
+      "remediation_category": "Network Security",
+      "impact": "An attacker could leverage this to gain significant unauthorized access, escalate privileges, or exfiltrate sensitive data from affected systems. Network-level vulnerabilities may allow traffic interception, lateral movement, or unauthorized service access.",
+      "remediation_brief": "Restrict network access using firewalls and segmentation. Disable unnecessary services and protocols. Implement network monitoring."
     },
     {
       "id": "AETHB-014",
@@ -227,7 +266,10 @@
         "https://www.bluetooth.com/specifications/specs/",
         "https://attack.mitre.org/techniques/T1499/"
       ],
-      "risk": "MEDIUM"
+      "risk": "MEDIUM",
+      "remediation_category": "Network Security",
+      "impact": "An attacker could potentially exploit this weakness to gain partial access, disclose sensitive information, or degrade the security posture of the affected system. Network-level vulnerabilities may allow traffic interception, lateral movement, or unauthorized service access.",
+      "remediation_brief": "Restrict network access using firewalls and segmentation. Disable unnecessary services and protocols. Implement network monitoring."
     },
     {
       "id": "AETHB-015",
@@ -243,7 +285,10 @@
         "https://interrupt.memfault.com/blog/debugging-firmware-with-openocd",
         "https://owasp.org/www-project-embedded-application-security/"
       ],
-      "risk": "HIGH"
+      "risk": "HIGH",
+      "remediation_category": "Physical Security",
+      "impact": "An attacker could leverage this to gain significant unauthorized access, escalate privileges, or exfiltrate sensitive data from affected systems. Physical security weaknesses may allow unauthorized hardware access, data extraction, or device manipulation.",
+      "remediation_brief": "Implement physical access controls and tamper detection. Disable debug interfaces in production. Secure hardware against unauthorized access."
     }
   ]
 }
