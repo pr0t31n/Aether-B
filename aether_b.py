@@ -53,6 +53,14 @@ from typing import Optional
 # ── Protocol token configuration ─────────────────────────────────────────────
 MANAGED = os.environ.get("CRUCIBLE_MANAGED") == "1"
 
+try:
+    import sys as _sys_ie
+    if "/opt/pr0t31n/shared" not in _sys_ie.path:
+        _sys_ie.path.insert(0, "/opt/pr0t31n/shared")
+    import pr0t31n_intel_emitter as _ie
+except ImportError:
+    _ie = None
+
 _CP_LOG     = "__CRUCIBLE_LOG__"
 _CP_ERR     = "__CRUCIBLE_ERR__"
 _CP_STATUS  = "__CRUCIBLE_STATUS__"
@@ -729,6 +737,22 @@ def _phase_passive_recon(cfg: dict, project_dir: Path) -> None:
     # ── Persist recon results ─────────────────────────────────────────────
     recon_json = recon_dir / "discovered_devices.json"
     recon_json.write_text(json.dumps(discovered_devices, indent=2), encoding="utf-8")
+    if _ie and MANAGED:
+        try:
+            _dev_rows = []
+            for _dev in discovered_devices:
+                _dev_rows.append({
+                    "bdaddr":   _dev.get("bdaddr", ""),
+                    "name":     _dev.get("name", ""),
+                    "rssi":     _dev.get("rssi", ""),
+                    "type":     _dev.get("type", ""),
+                    "vendor":   _dev.get("vendor", ""),
+                    "source":   _dev.get("source", ""),
+                })
+            if _dev_rows:
+                _ie.emit_intel("ble_device", _dev_rows, bulk=True)
+        except Exception:
+            pass
     _log(f"[0] Passive recon complete — {len(discovered_devices)} device(s) discovered")
     _status(phase_id, "complete", f"{len(discovered_devices)} device(s) found")
 
@@ -999,6 +1023,29 @@ def _phase_enumeration(cfg: dict, project_dir: Path) -> None:
     # Persist enumeration results
     enum_json = enum_dir / "enumeration_results.json"
     enum_json.write_text(json.dumps(all_devices_enum, indent=2), encoding="utf-8")
+    if _ie and MANAGED:
+        try:
+            _svc_rows = []
+            for _dev_e in all_devices_enum:
+                _bdaddr_e = _dev_e.get("bdaddr", "")
+                for _svc in (_dev_e.get("services", []) or []):
+                    _svc_rows.append({
+                        "bdaddr":      _bdaddr_e,
+                        "service":     _svc.get("name", ""),
+                        "uuid":        _svc.get("uuid", ""),
+                        "protocol":    _svc.get("protocol", ""),
+                    })
+                for _char in (_dev_e.get("characteristics", []) or []):
+                    _svc_rows.append({
+                        "bdaddr":      _bdaddr_e,
+                        "service":     "GATT characteristic",
+                        "uuid":        _char.get("uuid", ""),
+                        "properties":  _char.get("properties", ""),
+                    })
+            if _svc_rows:
+                _ie.emit_intel("ble_service", _svc_rows, bulk=True)
+        except Exception:
+            pass
     _log(f"[1] Enumeration complete — {len(all_devices_enum)} device(s) enumerated")
     _status(phase_id, "complete", f"{len(all_devices_enum)} device(s) enumerated")
 
@@ -1273,6 +1320,20 @@ def _phase_key_recovery(cfg: dict, project_dir: Path) -> None:
     # Persist key recovery results
     keys_json = key_dir / "recovered_keys.json"
     keys_json.write_text(json.dumps(recovered_keys, indent=2), encoding="utf-8")
+    if _ie and MANAGED and recovered_keys:
+        try:
+            _kr_rows = []
+            for _kr in recovered_keys:
+                _kr_rows.append({
+                    "bdaddr":      _kr.get("bdaddr", ""),
+                    "key_type":    _kr.get("type", ""),
+                    "method":      _kr.get("method", ""),
+                    "key_partial": _kr.get("key", "")[:8] + "..." if _kr.get("key") else "",
+                })
+            if _kr_rows:
+                _ie.emit_intel("ble_device", _kr_rows, bulk=True)
+        except Exception:
+            pass
     _log(f"[2] Key recovery complete — {len(recovered_keys)} key(s) recovered")
     _status(phase_id, "complete", f"{len(recovered_keys)} key(s) recovered")
 
