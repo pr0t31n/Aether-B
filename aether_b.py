@@ -144,16 +144,19 @@ _fdb = None
 
 def _init_fdb():
     global _fdb
-    _db_path = os.environ.get("PR0T31N_FINDINGS_DB")
-    if _db_path:
-        try:
-            import sys as _s
-            if "/opt/pr0t31n/shared" not in _s.path:
-                _s.path.insert(0, "/opt/pr0t31n/shared")
-            import pr0t31n_findings_db
-            _fdb = pr0t31n_findings_db.FindingsDB(_db_path)
-        except Exception:
-            pass
+    _db_path = os.environ.get("PR0T31N_FINDINGS_DB") or (str(_RUN_DIR / "findings.db") if _RUN_DIR else None)
+    if not _db_path:
+        return
+    try:
+        import sys as _s
+        if "/opt/pr0t31n/shared" not in _s.path:
+            _s.path.insert(0, "/opt/pr0t31n/shared")
+        import pr0t31n_findings_db
+        _fdb = pr0t31n_findings_db.FindingsDB(_db_path)
+    except Exception:
+        pass
+    if _fdb and _ie:
+        _ie.init_db(_fdb)
 
 
 # ── Scope enforcement state ───────────────────────────────────────────────────
@@ -736,8 +739,7 @@ def _phase_passive_recon(cfg: dict, project_dir: Path) -> None:
 
     # ── Persist recon results ─────────────────────────────────────────────
     recon_json = recon_dir / "discovered_devices.json"
-    recon_json.write_text(json.dumps(discovered_devices, indent=2), encoding="utf-8")
-    if _ie and MANAGED:
+    if _ie:
         try:
             _dev_rows = []
             for _dev in discovered_devices:
@@ -753,6 +755,7 @@ def _phase_passive_recon(cfg: dict, project_dir: Path) -> None:
                 _ie.emit_intel("ble_device", _dev_rows, bulk=True)
         except Exception:
             pass
+    recon_json.write_text(json.dumps(discovered_devices, indent=2), encoding="utf-8")
     _log(f"[0] Passive recon complete — {len(discovered_devices)} device(s) discovered")
     _status(phase_id, "complete", f"{len(discovered_devices)} device(s) found")
 
@@ -1022,8 +1025,7 @@ def _phase_enumeration(cfg: dict, project_dir: Path) -> None:
 
     # Persist enumeration results
     enum_json = enum_dir / "enumeration_results.json"
-    enum_json.write_text(json.dumps(all_devices_enum, indent=2), encoding="utf-8")
-    if _ie and MANAGED:
+    if _ie:
         try:
             _svc_rows = []
             for _dev_e in all_devices_enum:
@@ -1046,6 +1048,7 @@ def _phase_enumeration(cfg: dict, project_dir: Path) -> None:
                 _ie.emit_intel("ble_service", _svc_rows, bulk=True)
         except Exception:
             pass
+    enum_json.write_text(json.dumps(all_devices_enum, indent=2), encoding="utf-8")
     _log(f"[1] Enumeration complete — {len(all_devices_enum)} device(s) enumerated")
     _status(phase_id, "complete", f"{len(all_devices_enum)} device(s) enumerated")
 
@@ -1319,8 +1322,7 @@ def _phase_key_recovery(cfg: dict, project_dir: Path) -> None:
 
     # Persist key recovery results
     keys_json = key_dir / "recovered_keys.json"
-    keys_json.write_text(json.dumps(recovered_keys, indent=2), encoding="utf-8")
-    if _ie and MANAGED and recovered_keys:
+    if _ie and recovered_keys:
         try:
             _kr_rows = []
             for _kr in recovered_keys:
@@ -1334,6 +1336,7 @@ def _phase_key_recovery(cfg: dict, project_dir: Path) -> None:
                 _ie.emit_intel("ble_device", _kr_rows, bulk=True)
         except Exception:
             pass
+    keys_json.write_text(json.dumps(recovered_keys, indent=2), encoding="utf-8")
     _log(f"[2] Key recovery complete — {len(recovered_keys)} key(s) recovered")
     _status(phase_id, "complete", f"{len(recovered_keys)} key(s) recovered")
 
@@ -2062,6 +2065,7 @@ def run(cfg: dict, project_dir: Path) -> None:
     output_dir = project_dir / cfg.get("output_dir", "aether_b_output")
     output_dir.mkdir(parents=True, exist_ok=True)
     _RUN_DIR = output_dir
+    _init_fdb()
 
     # Scope enforcement
     scope_cfg = cfg.get("scope", {})
@@ -2281,7 +2285,6 @@ def main() -> None:
 
     _load_catalogue()
     _startup_tool_check()
-    _init_fdb()
 
     config_path = Path(args.config)
     cfg = _load_config(config_path)
