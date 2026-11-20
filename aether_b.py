@@ -43,6 +43,7 @@ try:
     import pr0t31n_tool_runner as _ur
 except ImportError:
     _ur = None
+import tempfile
 import threading
 import time
 import uuid
@@ -431,6 +432,63 @@ def _kill_proc(proc: subprocess.Popen, wait_secs: int = 5) -> None:
                 _PAUSE.unregister(proc.pid)
             except Exception:
                 pass
+
+
+# ── Per-phase checkpoint manager (inlined; will migrate to shared module) ─────
+
+class _ProgressManager:
+    """Thread-safe checkpoint for scan recovery."""
+    def __init__(self, checkpoint_file):
+        self._file = Path(checkpoint_file)
+        self._lock = threading.Lock()
+        self._state = self._load()
+    def _load(self):
+        if self._file.exists():
+            try:
+                data = json.loads(self._file.read_text(encoding="utf-8"))
+                data.setdefault("version", 1)
+                data.setdefault("completed_phases", [])
+                data.setdefault("phase_status", {})
+                return data
+            except Exception:
+                pass
+        return {"version": 1, "started": datetime.now(timezone.utc).isoformat(),
+                "completed_phases": [], "phase_status": {}}
+    def _save(self):
+        self._file.parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=str(self._file.parent), suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(self._state, f, indent=2)
+            os.replace(tmp, str(self._file))
+        except Exception:
+            try: os.unlink(tmp)
+            except Exception: pass
+    def is_phase_complete(self, phase):
+        with self._lock:
+            return phase in self._state.get("completed_phases", [])
+    def set_phase_status(self, phase, status, label="", detail=""):
+        with self._lock:
+            self._state.setdefault("phase_status", {})[phase] = {
+                "status": status, "label": label or phase,
+                "detail": detail, "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+            if status == "complete":
+                lst = self._state.setdefault("completed_phases", [])
+                if phase not in lst:
+                    lst.append(phase)
+            self._save()
+    def prepare_resume(self):
+        with self._lock:
+            ps = self._state.get("phase_status", {})
+            for k, v in ps.items():
+                if v.get("status") in ("running", "error"):
+                    v["status"] = "pending"
+                    v["updated_at"] = datetime.now(timezone.utc).isoformat()
+            self._save()
+            return dict(self._state)
+
+_CHECKPOINT: "_ProgressManager | None" = None
 
 
 def _check_pause():
@@ -2060,12 +2118,15 @@ def _phase_firmware(cfg: dict, project_dir: Path) -> None:
 # ── Main orchestrator ─────────────────────────────────────────────────────────
 
 def run(cfg: dict, project_dir: Path) -> None:
-    global _scope_bdaddrs, _scope_uuids, _RUN_DIR
+    global _scope_bdaddrs, _scope_uuids, _RUN_DIR, _CHECKPOINT
 
     output_dir = project_dir / cfg.get("output_dir", "aether_b_output")
     output_dir.mkdir(parents=True, exist_ok=True)
     _RUN_DIR = output_dir
     _init_fdb()
+
+    _CHECKPOINT = _ProgressManager(output_dir / "checkpoint.json")
+    _CHECKPOINT.prepare_resume()
 
     # Scope enforcement
     scope_cfg = cfg.get("scope", {})
@@ -2121,7 +2182,12 @@ def run(cfg: dict, project_dir: Path) -> None:
 
     # Phase 0 — Passive Recon
     if phases_cfg.get("passive_recon", True):
-        _phase_passive_recon(cfg, output_dir)
+        if _CHECKPOINT.is_phase_complete("p0_recon"):
+            _log("[✓] Phase 0 (Passive Recon) already complete — skipping")
+        else:
+            _CHECKPOINT.set_phase_status("p0_recon", "running", "Phase 0: Passive Recon")
+            _phase_passive_recon(cfg, output_dir)
+            _CHECKPOINT.set_phase_status("p0_recon", "complete", "Phase 0: Passive Recon")
     else:
         _log("[~] Phase passive_recon disabled in config — skipping")
 
@@ -2129,7 +2195,12 @@ def run(cfg: dict, project_dir: Path) -> None:
 
     # Phase 1 — Enumeration
     if phases_cfg.get("enumeration", True):
-        _phase_enumeration(cfg, output_dir)
+        if _CHECKPOINT.is_phase_complete("p1_enum"):
+            _log("[✓] Phase 1 (Enumeration) already complete — skipping")
+        else:
+            _CHECKPOINT.set_phase_status("p1_enum", "running", "Phase 1: Enumeration")
+            _phase_enumeration(cfg, output_dir)
+            _CHECKPOINT.set_phase_status("p1_enum", "complete", "Phase 1: Enumeration")
     else:
         _log("[~] Phase enumeration disabled in config — skipping")
 
@@ -2137,7 +2208,12 @@ def run(cfg: dict, project_dir: Path) -> None:
 
     # Phase 2 — Key Recovery
     if phases_cfg.get("key_recovery", True):
-        _phase_key_recovery(cfg, output_dir)
+        if _CHECKPOINT.is_phase_complete("p2_key_recovery"):
+            _log("[✓] Phase 2 (Key Recovery) already complete — skipping")
+        else:
+            _CHECKPOINT.set_phase_status("p2_key_recovery", "running", "Phase 2: Key Recovery")
+            _phase_key_recovery(cfg, output_dir)
+            _CHECKPOINT.set_phase_status("p2_key_recovery", "complete", "Phase 2: Key Recovery")
     else:
         _log("[~] Phase key_recovery disabled in config — skipping")
 
@@ -2145,7 +2221,12 @@ def run(cfg: dict, project_dir: Path) -> None:
 
     # Phase 3 — Exploitation
     if phases_cfg.get("exploitation", False):
-        _phase_exploitation(cfg, output_dir)
+        if _CHECKPOINT.is_phase_complete("p3_exploit"):
+            _log("[✓] Phase 3 (Exploitation) already complete — skipping")
+        else:
+            _CHECKPOINT.set_phase_status("p3_exploit", "running", "Phase 3: Exploitation")
+            _phase_exploitation(cfg, output_dir)
+            _CHECKPOINT.set_phase_status("p3_exploit", "complete", "Phase 3: Exploitation")
     else:
         _log("[~] Phase exploitation disabled in config — skipping (set exploitation: true to enable)")
 
@@ -2153,7 +2234,12 @@ def run(cfg: dict, project_dir: Path) -> None:
 
     # Phase 4 — Firmware
     if phases_cfg.get("firmware", False):
-        _phase_firmware(cfg, output_dir)
+        if _CHECKPOINT.is_phase_complete("p4_firmware"):
+            _log("[✓] Phase 4 (Firmware) already complete — skipping")
+        else:
+            _CHECKPOINT.set_phase_status("p4_firmware", "running", "Phase 4: Firmware")
+            _phase_firmware(cfg, output_dir)
+            _CHECKPOINT.set_phase_status("p4_firmware", "complete", "Phase 4: Firmware")
     else:
         _log("[~] Phase firmware disabled in config — skipping (set firmware: true to enable)")
 
